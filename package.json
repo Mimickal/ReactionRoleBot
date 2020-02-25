@@ -5,10 +5,12 @@
   "main": "main.js",
   "dependencies": {
     "discord.js": "github:discordjs/discord.js#master",
-    "knex": "^0.20.10"
+    "knex": "^0.20.10",
+    "sqlite3": "^4.1.1"
   },
   "devDependencies": {},
   "scripts": {
+    "knex": "node_modules/knex/bin/cli.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
