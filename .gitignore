@@ -2,3 +2,4 @@ node_modules/
 todo.txt
 *.swp
 dev.sqlite3
+dev-token
