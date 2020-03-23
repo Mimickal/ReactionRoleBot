@@ -46,7 +46,11 @@ function selectMessage(msg, parts) {
 		.then(message => {
 			// TODO cache this better
 			selectedMessage = message;
-			// TODO print a confirmation
+
+			return msg.reply(
+				`selected message with ID \`${message.id}\` ` +
+				`in channel <#${channelId}>. Link: ${message.url}`
+			);
 		})
 		.catch(logError);
 }
