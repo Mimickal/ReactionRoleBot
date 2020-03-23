@@ -39,6 +39,7 @@ function onMessage(msg) {
 	switch (cmd) {
 		case 'select': return selectMessage(msg, msgParts); break;
 		case 'role-add': return setupReactRole(msg, msgParts); break;
+		case 'role-remove': return removeReactRole(msg, msgParts); break;
 		default: logError('Unrecognized command ' + cmd);
 	}
 }
@@ -95,6 +96,27 @@ function setupReactRole(msg, parts) {
 		.then(() => msg.reply(
 			`mapped ${emoji} to <@&${role}> on message \`${selectedMessage.id}\``
 		))
+		.catch(logError);
+}
+
+/**
+ * Removes an emoji reaction role association from the currently selected
+ * message.
+ */
+function removeReactRole(msg, parts) {
+	// TODO handle custom emojis
+	// TODO handle invalid emoji
+	// TODO handle missing emoji
+	let emoji = parts.shift();
+
+	selectedMessage.reactions.cache.get(emoji).remove()
+		.then(() => {
+			mapping.get(selectedMessage.id).delete(emoji);
+
+			return msg.reply(
+				`removed ${emoji} role from message \`${selectedMessage.id}\``
+			);
+		})
 		.catch(logError);
 }
 
