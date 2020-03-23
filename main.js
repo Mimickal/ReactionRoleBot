@@ -17,6 +17,7 @@ let mapping = new Map();
 client.on('ready', () => console.log(`Logged in as ${client.user.tag}`));
 client.on('message', onMessage);
 client.on('messageReactionAdd', onReactionAdd);
+client.on('messageReactionRemove', onReactionRemove);
 // TODO on join check we have all the permissions we need
 // TODO can we PM the person who invited the bot?
 
@@ -133,27 +134,53 @@ function removeReactRole(msg, parts) {
  * Message must be in discord.js' cache for this event to fire!
  */
 function onReactionAdd(reaction, user) {
-	if (user === client.user) {
+	if (!isValidReaction(reaction, user)) {
 		return;
 	}
 
-	if (!mapping.has(reaction.message.id)) {
-		return;
-	}
-
-	// TODO support custom emoji here too. name corresponds to the emoji itself
-	if (!mapping.get(reaction.message.id).has(reaction.emoji.name)) {
-		return;
-	}
-
+	// TODO custom emoji support
 	roleId = mapping.get(reaction.message.id).get(reaction.emoji.name);
 
 	// TODO ensure reaction.message is a TextChannel and not a DM or something.
 	//      Need to do this so we can access guild on the message
 	reaction.message.guild.members.fetch(user.id)
-		.then(member => member.roles.add(roleId))
-		.then(() => console.log(`added role to ${user}`))
+		.then(member => member.roles.add(roleId, 'Role bot assignment'))
+		.then(() => console.log(`added role ${roleId} to ${user}`))
 		.catch(logError);
+}
+
+/**
+ * Event handler for when a reaction is removed from a message.
+ * Checks if the message has any reaction roles configured, removing a role from
+ * the user who removed their reaction, if applicable. Ignored reacts removed by
+ * this bot, of course.
+ *
+ * Message must be in discord.js' cache for this event to fire!
+ */
+function onReactionRemove(reaction, user) {
+	if (!isValidReaction(reaction, user)) {
+		return;
+	}
+
+	// TODO custom emoji support
+	roleId = mapping.get(reaction.message.id).get(reaction.emoji.name);
+
+	// TODO same as onReactionAdd, ensure this is a TextChannel
+	reaction.message.guild.members.fetch(user.id)
+		.then(member => member.roles.remove(roleId, 'Role bot removal'))
+		.then(() => console.log(`removed role ${roleId} from ${user}`))
+		.catch(logError);
+}
+
+/**
+ * Returns whether or not the reaction made by the given user is something we
+ * need to take action on.
+ */
+function isValidReaction(reaction, user) {
+	// TODO support custom emoji here too. name corresponds to the emoji itself
+	return user !== client.user
+	    && mapping.has(reaction.message.id)
+	    && mapping.get(reaction.message.id).has(reaction.emoji.name);
 }
 
 function extractRoleId(str) {
