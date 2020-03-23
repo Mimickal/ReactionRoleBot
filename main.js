@@ -50,6 +50,7 @@ function selectMessage(msg, parts) {
 	// TODO handle these missing
 	// TODO handle these not being an ID
 	// TODO handle these not being a VALID ID
+	// TODO handle giving channel ID as a mention
 	let channelId = parts.shift();
 	let messageId = parts.shift();
 
@@ -87,13 +88,14 @@ function setupReactRole(msg, parts) {
 
 	// TODO warn when no message is selected
 	// TODO warn when using custom emojis
+	// TODO cache this better
 	mapping.get(selectedMessage.id).set(emoji, role);
 
-	// TODO add reaction to message
-
-	msg.reply(
-		`mapped ${emoji} to <@&${role}> on message \`${selectedMessage.id}\``
-	).catch(logError);
+	selectedMessage.react(emoji)
+		.then(() => msg.reply(
+			`mapped ${emoji} to <@&${role}> on message \`${selectedMessage.id}\``
+		))
+		.catch(logError);
 }
 
 function extractRoleId(str) {
