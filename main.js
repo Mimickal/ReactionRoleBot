@@ -6,7 +6,7 @@ const events = require('./events');
 
 const client = new Discord.Client();
 const token_file = process.argv[2] || '/etc/discord/ReactionRoleBot/token';
-const token = fs.readFileSync(token_file);
+const token = fs.readFileSync(token_file).toString().trim();
 
 client.on('ready', () => console.log(`Logged in as ${client.user.tag}`));
 
