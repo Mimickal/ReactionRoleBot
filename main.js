@@ -127,5 +127,72 @@ function extractRoleId(str) {
 }
 
 function logError(err) {
+	// Single function to make error redirection easier in the future.
 	console.error(err);
+}
+
+// vvv  MICHELLES STUFF  vvv
+
+async function cmdAddRoleToggle(message, args) {
+	if (args.length !== 3) {
+		message.channel.send(
+`Command mark-message was invoked with ${args.length} arguments while it should have exactly 3.
+\`add-role-toggle <message_id> <emoji> <role_id>\``)
+		return;
+	}
+
+	let target_msg_id = args.shift();
+	let emoji_name    = emojiIdFromStr(args.shift());
+	let role_id       = args.shift();
+
+	message.channel.messages.fetch(target_msg_id)
+		.then(async target_msg => {
+			console.log(emoji_name);
+			await target_msg.react(emoji_name);
+		}).catch(async err => {
+			if (err instanceof Discord.DiscordAPIError &&
+				err.message === 'Missing Access') {
+
+				logIssue(
+					`No permission to read ${channel.id} (#${channel.name})`
+				);
+				return;
+			} else if (err instanceof Discord.DiscordAPIError) {
+				await message.channel.send(`Error: ${err.message}.`);
+				return;
+			}
+		}
+	);
+
+}
+
+async function onAddReaction(reaction) {
+	if (reaction.me) {
+		return;
+	}
+	console.log(emojiIdFromEmoji(reaction.emoji), reaction.user_id);
+}
+
+async function onRemoveReaction(reaction) {
+	if (reaction.me) {
+		return;
+	}
+	console.log(emojiIdFromEmoji(reaction.emoji), reaction.user_id);
+}
+
+function emojiIdFromStr(emoji_name) {
+	// This is so custom server emojis work. They are encoded in messages as
+	// example: <:flagtg:681985787864416286>.
+	// 681985787864416286 should be used in the react request though.
+	let sanitized_emoji = emoji_name.match(/<:.+:(.+)>/);
+
+	if (sanitized_emoji) return sanitized_emoji[1];
+
+	console.log(sanitized_emoji);
+
+	return emoji_name;
+}
+
+function emojiIdFromEmoji(emoji) {
+	return emoji.id || emoji.name;
 }
