@@ -18,6 +18,10 @@ client.login(token).catch(err => {
 	process.exit(1);
 });
 
+/**
+ * Event handler for getting a new message.
+ * Parses and delegates any role bot command.
+ */
 function onMessage(msg) {
 	// TODO warn for ambiguity on multiple mentions
 	if (!msg.mentions.has(client.user)) {
@@ -34,6 +38,9 @@ function onMessage(msg) {
 	}
 }
 
+/**
+ * Selects a message to associate with any subsequent role commands.
+ */
 function selectMessage(msg, parts) {
 	// TODO handle these missing
 	// TODO handle these not being an ID
@@ -44,6 +51,7 @@ function selectMessage(msg, parts) {
 	client.channels.fetch(channelId)
 		.then(channel => channel.messages.fetch(messageId))
 		.then(message => {
+			// TODO pull this out to helper?
 			// TODO cache this better
 			selectedMessage = message;
 
