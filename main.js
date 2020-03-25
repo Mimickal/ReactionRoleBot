@@ -1,6 +1,8 @@
 const fs = require('fs');
 
 const Discord = require('discord.js');
+
+const cache = require('./cache');
 const db = require('./database');
 const events = require('./events');
 
@@ -8,11 +10,6 @@ const client = new Discord.Client();
 const token_file = process.argv[2] || '/etc/discord/ReactionRoleBot/token';
 const token = fs.readFileSync(token_file).toString().trim();
 
-// TODO this should all be database-driven
-// TODO potentially have our own caching layer for emoji->role mapping
-// TODO bonus points if it makes use of discord.js' own caching scheme
-let selectedMessage;
-let mapping = new Map();
 
 client.on('ready', () => console.log(`Logged in as ${client.user.tag}`));
 client.on('message', onMessage);
@@ -63,13 +60,7 @@ function selectMessage(msg, parts) {
 	client.channels.fetch(channelId)
 		.then(channel => channel.messages.fetch(messageId))
 		.then(message => {
-			// TODO pull this out to helper?
-			// TODO cache this better
-			selectedMessage = message;
-
-			if (!mapping.has(messageId)) {
-				mapping.set(messageId, new Map());
-			}
+			cache.selectMessage(msg.author.id, message);
 
 			return msg.reply(
 				`selected message with ID \`${message.id}\` ` +
@@ -94,9 +85,11 @@ function setupReactRole(msg, parts) {
 
 	// TODO warn when no message is selected
 	// TODO warn when using custom emojis
-	// TODO cache this better
-	mapping.get(selectedMessage.id).set(emoji, role);
+	// TODO handle error this function throws
+	let userId = msg.author.id;
+	cache.addEmojiRole(userId, emoji, role);
 
+	let selectedMessage = cache.getSelectedMessage(userId);
 	selectedMessage.react(emoji)
 		.then(() => msg.reply(
 			`mapped ${emoji} to <@&${role}> on message \`${selectedMessage.id}\``
@@ -116,7 +109,8 @@ function removeReactRole(msg, parts) {
 
 	selectedMessage.reactions.cache.get(emoji).remove()
 		.then(() => {
-			mapping.get(selectedMessage.id).delete(emoji);
+			// TODO handle error from this function
+			cache.removeEmojiRole(msg.user.id, emoji);
 
 			return msg.reply(
 				`removed ${emoji} role from message \`${selectedMessage.id}\``
@@ -134,12 +128,15 @@ function removeReactRole(msg, parts) {
  * Message must be in discord.js' cache for this event to fire!
  */
 function onReactionAdd(reaction, user) {
-	if (!isValidReaction(reaction, user)) {
+	if (user === client.user) {
 		return;
 	}
 
 	// TODO custom emoji support
-	roleId = mapping.get(reaction.message.id).get(reaction.emoji.name);
+	roleId = cache.getReactRole(reaction.message.id, reaction.emoji.name);
+	if (!roleId) {
+		return;
+	}
 
 	// TODO ensure reaction.message is a TextChannel and not a DM or something.
 	//      Need to do this so we can access guild on the message
@@ -158,29 +155,21 @@ function onReactionAdd(reaction, user) {
  * Message must be in discord.js' cache for this event to fire!
  */
 function onReactionRemove(reaction, user) {
-	if (!isValidReaction(reaction, user)) {
+	if (user === client.user) {
 		return;
 	}
 
 	// TODO custom emoji support
-	roleId = mapping.get(reaction.message.id).get(reaction.emoji.name);
+	roleId = cache.getReactRole(reaction.message.id, reaction.emoji.name);
+	if (!roleId) {
+		return;
+	}
 
 	// TODO same as onReactionAdd, ensure this is a TextChannel
 	reaction.message.guild.members.fetch(user.id)
 		.then(member => member.roles.remove(roleId, 'Role bot removal'))
 		.then(() => console.log(`removed role ${roleId} from ${user}`))
 		.catch(logError);
-}
-
-/**
- * Returns whether or not the reaction made by the given user is something we
- * need to take action on.
- */
-function isValidReaction(reaction, user) {
-	// TODO support custom emoji here too. name corresponds to the emoji itself
-	return user !== client.user
-	    && mapping.has(reaction.message.id)
-	    && mapping.get(reaction.message.id).has(reaction.emoji.name);
 }
 
 function extractRoleId(str) {
