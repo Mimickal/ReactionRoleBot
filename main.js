@@ -18,10 +18,11 @@ const token_file = process.argv[2] || '/etc/discord/ReactionRoleBot/token';
 const token = fs.readFileSync(token_file).toString().trim();
 
 
-client.on('ready', () => console.log(`Logged in as ${client.user.tag}`));
-client.on('message', onMessage);
-client.on('messageReactionAdd', onReactionAdd);
-client.on('messageReactionRemove', onReactionRemove);
+const Events = Discord.Constants.Events;
+client.on(Events.CLIENT_READY, () => console.log(`Logged in as ${client.user.tag}`));
+client.on(Events.MESSAGE_CREATE, onMessage);
+client.on(Events.MESSAGE_REACTION_ADD, onReactionAdd);
+client.on(Events.MESSAGE_REACTION_REMOVE, onReactionRemove);
 // TODO on join check we have all the permissions we need
 // TODO can we PM the person who invited the bot?
 
