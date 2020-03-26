@@ -3,8 +3,7 @@ const fs = require('fs');
 const Discord = require('discord.js');
 
 const cache = require('./cache');
-const db = require('./database');
-const events = require('./events');
+const database = require('./database');
 
 // Everything operates on IDs, so we can safely rely on partials.
 const client = new Discord.Client({
@@ -21,6 +20,7 @@ const token = fs.readFileSync(token_file).toString().trim();
 const Events = Discord.Constants.Events;
 client.on(Events.CLIENT_READY, () => console.log(`Logged in as ${client.user.tag}`));
 client.on(Events.GUILD_CREATE, onGuildJoin);
+client.on(Events.GUILD_DELETE, onGuildLeave);
 client.on(Events.MESSAGE_CREATE, onMessage);
 client.on(Events.MESSAGE_REACTION_ADD, onReactionAdd);
 client.on(Events.MESSAGE_REACTION_REMOVE, onReactionRemove);
@@ -70,6 +70,14 @@ function onGuildJoin(guild) {
 					));
 			}
 		})
+		.catch(logError);
+}
+
+/**
+ * Event handler for when the bot leaves (or is kicked from) a guild.
+ */
+function onGuildLeave(guild) {
+	database.clearGuildInfo(guild.id)
 		.catch(logError);
 }
 

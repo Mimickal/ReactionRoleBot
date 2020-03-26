@@ -36,6 +36,7 @@ async function addEmojiRole(user_id, emoji_id, role_id) {
 	let message = await getSelectedMessage(user_id);
 
 	return database.addRoleReact({
+		guild_id: message.guild.id,
 		message_id: message.id,
 		emoji_id: emoji_id,
 		role_id: role_id

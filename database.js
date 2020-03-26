@@ -16,7 +16,9 @@ const DISCORD_ID_LENGTH = {
  */
 function addRoleReact(args) {
 	// TODO sanity check values
-	let fields = lodash.pick(args, ['message_id', 'emoji_id', 'role_id']);
+	let fields = lodash.pick(args, [
+		'guild_id', 'message_id', 'emoji_id', 'role_id'
+	]);
 
 	return knex(REACTS)
 		.insert(fields)
@@ -73,12 +75,20 @@ function getRoleReactMap(message_id) {
 		});
 }
 
+/**
+ * Deletes all the data stored for the given guild.
+ */
+function clearGuildInfo(guild_id) {
+	return knex(REACTS).where('guild_id', guild_id).del();
+}
+
 module.exports = {
 	DISCORD_ID_LENGTH,
 	REACTS,
 	addRoleReact,
 	removeRoleReact,
 	getRoleReact,
-	getRoleReactMap
+	getRoleReactMap,
+	clearGuildInfo
 };
 
