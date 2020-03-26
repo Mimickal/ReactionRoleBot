@@ -42,10 +42,24 @@ function removeRoleReact(args) {
 }
 
 /**
+ * Returns the role for the given emoji on the given message, or null if there
+ * is no role associated with the emoji on the message.
+ */
+function getRoleReact(args) {
+	// TODO sanity check values
+	let fields = lodash.pick(args, ['message_id', 'emoji_id']);
+
+	return knex(REACTS)
+		.first('role_id')
+		.where(fields)
+		.then(result => result ? result.role_id : null);
+}
+
+/**
  * Returns the emoji->role mapping for the given message as a Map object, or
  * null if the given message has no react roles set up.
  */
-function getRoleReacts(message_id) {
+function getRoleReactMap(message_id) {
 	return knex(REACTS)
 		.select(['emoji_id', 'role_id'])
 		.where('message_id', message_id)
@@ -55,11 +69,7 @@ function getRoleReacts(message_id) {
 				new Map()
 			);
 
-			if (mapping.size === 0) {
-				mapping = null;
-			}
-
-			return Promise.resolve(mapping);
+			return mapping.size > 0 ? mapping : null;
 		});
 }
 
@@ -68,6 +78,7 @@ module.exports = {
 	REACTS,
 	addRoleReact,
 	removeRoleReact,
-	getRoleReacts
+	getRoleReact,
+	getRoleReactMap
 };
 

@@ -87,12 +87,12 @@ function setupReactRole(msg, parts) {
 	// TODO warn when using custom emojis
 	// TODO handle error this function throws
 	let userId = msg.author.id;
-	cache.addEmojiRole(userId, emoji, role);
 
-	let selectedMessage = cache.getSelectedMessage(userId);
-	selectedMessage.react(emoji)
-		.then(() => msg.reply(
-			`mapped ${emoji} to <@&${role}> on message \`${selectedMessage.id}\``
+	cache.addEmojiRole(userId, emoji, role)
+		.then(() => cache.getSelectedMessage(userId))
+		.then(selectedMessage => selectedMessage.react(emoji))
+		.then(reaction => msg.reply(
+			`mapped ${emoji} to <@&${role}> on message \`${reaction.message.id}\``
 		))
 		.catch(logError);
 }
@@ -106,16 +106,15 @@ function removeReactRole(msg, parts) {
 	// TODO handle invalid emoji
 	// TODO handle missing emoji
 	let emoji = parts.shift();
+	let userId = msg.author.id;
 
-	selectedMessage.reactions.cache.get(emoji).remove()
-		.then(() => {
-			// TODO handle error from this function
-			cache.removeEmojiRole(msg.user.id, emoji);
-
-			return msg.reply(
+	cache.getSelectedMessage(userId)
+		.then(selectedMessage => selectedMessage.cache.get(emoji).remove()
+			.then(() => cache.removeEmojiRole(userId, emoji))
+			.then(() => msg.reply(
 				`removed ${emoji} role from message \`${selectedMessage.id}\``
-			);
-		})
+			))
+		)
 		.catch(logError);
 }
 
@@ -132,17 +131,18 @@ function onReactionAdd(reaction, user) {
 		return;
 	}
 
-	// TODO custom emoji support
-	roleId = cache.getReactRole(reaction.message.id, reaction.emoji.name);
-	if (!roleId) {
-		return;
-	}
+	cache.getReactRole(reaction.message.id, reaction.emoji.name)
+		.then(roleId => {
+			if (!roleId) {
+				return;
+			}
 
-	// TODO ensure reaction.message is a TextChannel and not a DM or something.
-	//      Need to do this so we can access guild on the message
-	reaction.message.guild.members.fetch(user.id)
-		.then(member => member.roles.add(roleId, 'Role bot assignment'))
-		.then(() => console.log(`added role ${roleId} to ${user}`))
+			// TODO ensure reaction.message is a TextChannel and not a DM or something.
+			//      Need to do this so we can access guild on the message
+			return reaction.message.guild.members.fetch(user.id)
+				.then(member => member.roles.add(roleId, 'Role bot assignment'))
+				.then(() => console.log(`added role ${roleId} to ${user}`));
+		})
 		.catch(logError);
 }
 
@@ -159,16 +159,17 @@ function onReactionRemove(reaction, user) {
 		return;
 	}
 
-	// TODO custom emoji support
-	roleId = cache.getReactRole(reaction.message.id, reaction.emoji.name);
-	if (!roleId) {
-		return;
-	}
+	cache.getReactRole(reaction.message.id, reaction.emoji.name)
+		.then(roleId => {
+			if (!roleId) {
+				return;
+			}
 
-	// TODO same as onReactionAdd, ensure this is a TextChannel
-	reaction.message.guild.members.fetch(user.id)
-		.then(member => member.roles.remove(roleId, 'Role bot removal'))
-		.then(() => console.log(`removed role ${roleId} from ${user}`))
+			// TODO same as onReactionAdd, ensure this is a TextChannel
+			return reaction.message.guild.members.fetch(user.id)
+				.then(member => member.roles.remove(roleId, 'Role bot removal'))
+				.then(() => console.log(`removed role ${roleId} from ${user}`))
+		})
 		.catch(logError);
 }
 
