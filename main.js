@@ -20,6 +20,7 @@ const token = fs.readFileSync(token_file).toString().trim();
 
 const Events = Discord.Constants.Events;
 client.on(Events.CLIENT_READY, () => console.log(`Logged in as ${client.user.tag}`));
+client.on(Events.GUILD_CREATE, onGuildJoin);
 client.on(Events.MESSAGE_CREATE, onMessage);
 client.on(Events.MESSAGE_REACTION_ADD, onReactionAdd);
 client.on(Events.MESSAGE_REACTION_REMOVE, onReactionRemove);
@@ -31,6 +32,46 @@ client.login(token).catch(err => {
 	logError(err);
 	process.exit(1);
 });
+
+/**
+ * Event handler for when the bot joins a new guild.
+ */
+function onGuildJoin(guild) {
+	guild.members.fetch(client.user.id)
+		.then(clientMember => {
+			const Perms = Discord.Permissions.FLAGS;
+
+			// This bot probably shouldn't be given the admin permission, but if
+			// we have it then the other ones don't matter.
+			if (clientMember.hasPermission(Perms.ADMINISTRATOR)) {
+				return;
+			}
+
+			// Permissions integer: 1074078784
+			const requiredPermMap = {
+				[Perms.ADD_REACTIONS]: 'Add Reactions',
+				[Perms.MANAGE_MESSAGES]: 'Manage Messages',
+				[Perms.MANAGE_ROLES]: 'Manage Roles',
+				[Perms.READ_MESSAGE_HISTORY]: 'Read Message History',
+				[Perms.USE_EXTERNAL_EMOJIS]: 'Use External Emojis',
+				[Perms.VIEW_CHANNEL]: 'Read Text Channels & See Voice Channels'
+			};
+
+			let missingPermNames = Object.entries(requiredPermMap)
+				.filter(([perm, name]) => clientMember.hasPermission(parseInt(perm)))
+				.map(([perm, name]) => name);
+
+			if (missingPermNames) {
+				return guild.owner.createDM()
+					.then(dmChannel => dmChannel.send(
+						"Heads up, I am missing the following permissions. " +
+						"Without them, I probably won't work right:\n" +
+						missingPermNames.join('\n')
+					));
+			}
+		})
+		.catch(logError);
+}
 
 /**
  * Event handler for getting a new message.
