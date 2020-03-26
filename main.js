@@ -6,7 +6,14 @@ const cache = require('./cache');
 const db = require('./database');
 const events = require('./events');
 
-const client = new Discord.Client();
+// Everything operates on IDs, so we can safely rely on partials.
+const client = new Discord.Client({
+	partials: [
+		Discord.Constants.PartialTypes.MESSAGE,
+		Discord.Constants.PartialTypes.CHANNEL,
+		Discord.Constants.PartialTypes.REACTION
+	]
+});
 const token_file = process.argv[2] || '/etc/discord/ReactionRoleBot/token';
 const token = fs.readFileSync(token_file).toString().trim();
 
