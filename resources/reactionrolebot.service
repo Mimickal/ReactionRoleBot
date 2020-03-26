@@ -11,7 +11,7 @@ Restart=on-failure
 RestartSec=10
 User=donut
 Environment="NODE_ENV=prod"
-ExecStart=NODE_ENV=prod /usr/local/bin/node /srv/discord/ReactionRoleBot/index.js
+ExecStart=/usr/local/bin/node /srv/discord/ReactionRoleBot/main.js
 
 [Install]
 WantedBy=multi-user.target
