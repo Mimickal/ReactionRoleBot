@@ -41,6 +41,11 @@ function onMessage(msg) {
 		return;
 	}
 
+	if (!msg.member.hasPermission(Discord.Permissions.FLAGS.ADMINISTRATOR)) {
+		msg.reply("You don't have permission to use that command");
+		return;
+	}
+
 	let msgParts = msg.content.split(/\s+/);
 	msgParts.shift(); // Pop off mention
 	let cmd = msgParts.shift();
