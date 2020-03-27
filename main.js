@@ -16,6 +16,12 @@ const client = new Discord.Client({
 const token_file = process.argv[2] || '/etc/discord/ReactionRoleBot/token';
 const token = fs.readFileSync(token_file).toString().trim();
 
+// Map of command names to handling functions. Doubles as a validator.
+const COMMANDS = new Map();
+COMMANDS.set('select', selectMessage);
+COMMANDS.set('role-add', setupReactRole);
+COMMANDS.set('role-remove', removeReactRole);
+
 
 const Events = Discord.Constants.Events;
 client.on(Events.CLIENT_READY, () => console.log(`Logged in as ${client.user.tag}`));
@@ -84,8 +90,24 @@ function onGuildLeave(guild) {
  * Parses and delegates any role bot command.
  */
 function onMessage(msg) {
-	// TODO warn for ambiguity on multiple mentions
+	// Ignore anything where we're not even mentioned
 	if (!msg.mentions.has(client.user)) {
+		return;
+	}
+
+	let msgParts = msg.content.split(/\s+/);
+
+	// Only pay attention to messages where we're mentioned first.
+	let mentionUserId = extractUserId(msgParts.shift());
+	if (mentionUserId !== client.user.id) {
+		return;
+	}
+
+	let cmdName = msgParts.shift();
+
+	// Only pay attention to messages that are known commands.
+	if (!COMMANDS.has(cmdName)) {
+		logError('Possible unrecognized command: ' + msg.content);
 		return;
 	}
 
@@ -94,16 +116,8 @@ function onMessage(msg) {
 		return;
 	}
 
-	let msgParts = msg.content.split(/\s+/);
-	msgParts.shift(); // Pop off mention
-	let cmd = msgParts.shift();
-
-	switch (cmd) {
-		case 'select': return selectMessage(msg, msgParts); break;
-		case 'role-add': return setupReactRole(msg, msgParts); break;
-		case 'role-remove': return removeReactRole(msg, msgParts); break;
-		default: logError('Unrecognized command: ' + msg.content);
-	}
+	// Run the handler for this command
+	COMMANDS.get(cmdName)(msg, msgParts);
 }
 
 /**
@@ -233,9 +247,16 @@ function onReactionRemove(reaction, user) {
 		.catch(logError);
 }
 
+// I'm aware Discord.MessageMentions.*_PATTERN constants exist, but they all
+// have the global flag set, which screws up matching groups. For this reason we
+// need to construct our own.
+
+function extractUserId(str) {
+	let match = str.match(/<@!(\d{17,19})>/);
+	return match ? match[1] : null;
+}
+
 function extractRoleId(str) {
-	// I'm aware Discord.MessageMentions.ROLES_PATTERN exists, but that has the
-	// global flag set, which screws up matching groups, for whatever reason.
 	return str.match(/<@&(\d{17,19})>/)[1];
 }
 
