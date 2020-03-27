@@ -124,12 +124,38 @@ function onMessage(msg) {
  * Selects a message to associate with any subsequent role commands.
  */
 function selectMessage(msg, parts) {
-	// TODO handle these missing
-	// TODO handle these not being an ID
-	// TODO handle these not being a VALID ID
-	// TODO handle giving channel ID as a mention
-	let channelId = parts.shift();
-	let messageId = parts.shift();
+	const usage = '\nUsage: `select <channel_id> <message_id>`';
+
+	let maybeChannelId = parts.shift();
+	let maybeMessageId = parts.shift();
+
+	if (parts.length > 0) {
+		msg.reply('Too many arguments!' + usage);
+		return;
+	}
+
+	if (!maybeChannelId) {
+		msg.reply('Missing channel_id!' + usage);
+		return;
+	}
+
+	if (!maybeMessageId) {
+		msg.reply('Missing message_id!' + usage);
+		return;
+	}
+
+	let channelId = extractId(maybeChannelId);
+	let messageId = extractId(maybeMessageId);
+
+	if (!channelId) {
+		msg.reply(`Given channel_id \`${maybeChannelId}\` is not a valid ID`);
+		return;
+	}
+
+	if (!messageId) {
+		msg.reply(`Given message_id \`${maybeMessageId}\` is not a valid ID`);
+		return;
+	}
 
 	client.channels.fetch(channelId)
 		.then(channel => channel.messages.fetch(messageId))
@@ -141,7 +167,27 @@ function selectMessage(msg, parts) {
 				`in channel <#${channelId}>. Link: ${message.url}`
 			);
 		})
-		.catch(logError);
+		.catch(err => {
+			// TODO clear selected message for user on error!
+
+			let errMsg;
+			if (err.message.match(/Unknown Channel/)) {
+				errMsg = "I can't find a channel in this server with ID "
+					+ `\`${channelId}\`.`;
+			}
+			else if (err.message.match(/Unknown Message/)) {
+				errMsg = `I can't find a message with ID \`${messageId}\` `
+					+ `in channel <#${channelId}>.`;
+			}
+			else {
+				errMsg = 'Idk man something went wrong. Try again?';
+				logError(err, 'For message', msg.content);
+			}
+
+			errMsg += usage;
+
+			msg.reply(errMsg);
+		});
 }
 
 /**
@@ -250,6 +296,13 @@ function onReactionRemove(reaction, user) {
 // I'm aware Discord.MessageMentions.*_PATTERN constants exist, but they all
 // have the global flag set, which screws up matching groups. For this reason we
 // need to construct our own.
+//
+// Also, for flexibility's sake we just don't care about what type of ID this
+// is. This could have collisions but it's unlikely.
+function extractId(str) {
+	let match = str.match(/(\d{17,19})/);
+	return match ? match[1] : null;
+}
 
 function extractUserId(str) {
 	let match = str.match(/<@!(\d{17,19})>/);
