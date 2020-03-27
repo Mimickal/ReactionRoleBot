@@ -24,8 +24,6 @@ client.on(Events.GUILD_DELETE, onGuildLeave);
 client.on(Events.MESSAGE_CREATE, onMessage);
 client.on(Events.MESSAGE_REACTION_ADD, onReactionAdd);
 client.on(Events.MESSAGE_REACTION_REMOVE, onReactionRemove);
-// TODO on join check we have all the permissions we need
-// TODO can we PM the person who invited the bot?
 
 
 client.login(token).catch(err => {
@@ -104,7 +102,7 @@ function onMessage(msg) {
 		case 'select': return selectMessage(msg, msgParts); break;
 		case 'role-add': return setupReactRole(msg, msgParts); break;
 		case 'role-remove': return removeReactRole(msg, msgParts); break;
-		default: logError('Unrecognized command ' + cmd);
+		default: logError('Unrecognized command: ' + msg.content);
 	}
 }
 
