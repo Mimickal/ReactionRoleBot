@@ -122,6 +122,7 @@ function onMessage(msg) {
 
 /**
  * Selects a message to associate with any subsequent role commands.
+ * Previously selected message is cleared if the user gives bad input for this.
  */
 function selectMessage(msg, parts) {
 	const usage = '\nUsage: `select <channel_id> <message_id>`';
@@ -129,31 +130,19 @@ function selectMessage(msg, parts) {
 	let maybeChannelId = parts.shift();
 	let maybeMessageId = parts.shift();
 
-	if (parts.length > 0) {
-		msg.reply('Too many arguments!' + usage);
-		return;
-	}
-
-	if (!maybeChannelId) {
-		msg.reply('Missing channel_id!' + usage);
-		return;
-	}
-
-	if (!maybeMessageId) {
-		msg.reply('Missing message_id!' + usage);
-		return;
-	}
-
 	let channelId = extractId(maybeChannelId);
 	let messageId = extractId(maybeMessageId);
 
-	if (!channelId) {
-		msg.reply(`Given channel_id \`${maybeChannelId}\` is not a valid ID`);
-		return;
-	}
+	let issue;
+	if      (parts.length > 0) issue = 'Too many arguments!';
+	else if (!maybeChannelId)  issue = 'Missing channel_id!';
+	else if (!maybeMessageId)  issue = 'Missing message_id!';
+	else if (!channelId) issue = `Invalid channel_id \`${maybeChannelId}\`!`;
+	else if (!messageId) issue = `Invalid message_id \`${maybeMessageId}\`!`;
 
-	if (!messageId) {
-		msg.reply(`Given message_id \`${maybeMessageId}\` is not a valid ID`);
+	if (issue) {
+		msg.reply(issue + usage);
+		cache.clearSelectedMessage(msg.author.id);
 		return;
 	}
 
@@ -168,7 +157,7 @@ function selectMessage(msg, parts) {
 			);
 		})
 		.catch(err => {
-			// TODO clear selected message for user on error!
+			cache.clearSelectedMessage(msg.author.id);
 
 			let errMsg;
 			if (err.message.match(/Unknown Channel/)) {
@@ -300,6 +289,10 @@ function onReactionRemove(reaction, user) {
 // Also, for flexibility's sake we just don't care about what type of ID this
 // is. This could have collisions but it's unlikely.
 function extractId(str) {
+	if (!str) {
+		return null;
+	}
+
 	let match = str.match(/(\d{17,19})/);
 	return match ? match[1] : null;
 }

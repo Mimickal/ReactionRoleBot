@@ -20,9 +20,16 @@ function selectMessage(user_id, message) {
 async function getSelectedMessage(user_id) {
 	let message = selectedMessages.get(user_id);
 	if (!message) {
-		throw new Exception('No message selected!');
+		throw new Error('No message selected!');
 	}
 	return message;
+}
+
+/**
+ * Clears the selected message for the given user.
+ */
+function clearSelectedMessage(user_id) {
+	selectedMessages.delete(user_id);
 }
 
 /**
@@ -62,7 +69,7 @@ async function removeEmojiRole(user_id, emoji_id) {
 	if (role_id) {
 		database.removeRoleReact(args);
 	} else {
-		throw new Exception(`No role mapping found for emoji ${emoji_id}!`);
+		throw new Error(`No role mapping found for emoji ${emoji_id}!`);
 	}
 }
 
@@ -80,6 +87,7 @@ function getReactRole(message_id, emoji_id) {
 module.exports = {
 	selectMessage,
 	getSelectedMessage,
+	clearSelectedMessage,
 	addEmojiRole,
 	removeEmojiRole,
 	getReactRole
