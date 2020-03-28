@@ -306,6 +306,17 @@ function extractRoleId(str) {
 	return str.match(/<@&(\d{17,19})>/)[1];
 }
 
+/**
+ * Allows us to handle custom server emojis. They are encoded in messages like
+ * this: <:flagtg:681985787864416286>. Discord.js can add emojis using a
+ * unicode string for built-in emojis, or the ID portion of the name
+ * (e.g. 681985787864416286) for custom server emojis.
+ */
+function extractEmoji(emoji) {
+	let match = emoji.match(/<:.+:(\d{17,19})>/);
+	return match ? match[1] : emoji;
+}
+
 function logError(err) {
 	// Single function to make error redirection easier in the future.
 	// TODO handle when we don't have permission to add roles or reactions
@@ -359,19 +370,6 @@ async function onRemoveReaction(reaction) {
 		return;
 	}
 	console.log(emojiIdFromEmoji(reaction.emoji), reaction.user_id);
-}
-
-function emojiIdFromStr(emoji_name) {
-	// This is so custom server emojis work. They are encoded in messages as
-	// example: <:flagtg:681985787864416286>.
-	// 681985787864416286 should be used in the react request though.
-	let sanitized_emoji = emoji_name.match(/<:.+:(.+)>/);
-
-	if (sanitized_emoji) return sanitized_emoji[1];
-
-	console.log(sanitized_emoji);
-
-	return emoji_name;
 }
 
 function emojiIdFromEmoji(emoji) {
