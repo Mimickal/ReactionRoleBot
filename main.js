@@ -6,6 +6,7 @@ const cache = require('./cache');
 const database = require('./database');
 
 // Everything operates on IDs, so we can safely rely on partials.
+// This causes reaction events to fire for uncached messages.
 const client = new Discord.Client({
 	partials: [
 		Discord.Constants.PartialTypes.MESSAGE,
@@ -232,8 +233,6 @@ function removeReactRole(msg, parts) {
  * Checks if the message has any reaction roles configured, assigning a role to
  * the user who added the reaction, if applicable. Ignores reacts added by this
  * bot, of course.
- *
- * Message must be in discord.js' cache for this event to fire!
  */
 function onReactionAdd(reaction, user) {
 	if (user === client.user) {
@@ -260,8 +259,6 @@ function onReactionAdd(reaction, user) {
  * Checks if the message has any reaction roles configured, removing a role from
  * the user who removed their reaction, if applicable. Ignored reacts removed by
  * this bot, of course.
- *
- * Message must be in discord.js' cache for this event to fire!
  */
 function onReactionRemove(reaction, user) {
 	if (user === client.user) {
