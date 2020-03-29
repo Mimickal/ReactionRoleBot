@@ -146,6 +146,8 @@ function onMessage(msg) {
  * Previously selected message is cleared if the user gives bad input for this.
  */
 function selectMessage(msg, parts) {
+	// TODO support selection by URL
+
 	const usage = '\nUsage: `select <channel> <message_id>`';
 
 	let maybeChannelId = parts.shift();
@@ -206,6 +208,8 @@ function selectMessage(msg, parts) {
  * Associate an emoji reaction with a role for the currently selected message.
  */
 function setupReactRole(msg, parts) {
+	// TODO do we want to warn when two emojis map to the same role?
+
 	const usage = '\nUsage: `role-add <emoji> <role>`';
 
 	let rawEmoji = parts.shift(); // Needed to print emoji in command response
@@ -363,6 +367,10 @@ function onReactionAdd(reaction, user) {
  * this bot, of course.
  */
 function onReactionRemove(reaction, user) {
+	// TODO How do we handle two emojis mapped to the same role?
+	// Do we only remove the role if the user doesn't have any of the mapped
+	// reactions? Or do we remove when any of the emojis are un-reacted?
+
 	if (user === client.user) {
 		return;
 	}
@@ -417,9 +425,11 @@ function emojiIdFromEmoji(emoji) {
 	return emoji.id || emoji.name;
 }
 
+/**
+ * Single function to make error redirection easier in the future.
+ * Maybe some day we'll do something more intelligent with errors.
+ */
 function logError(err) {
-	// Single function to make error redirection easier in the future.
-	// TODO handle when we don't have permission to add roles or reactions
 	console.error(err);
 }
 
