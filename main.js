@@ -146,7 +146,7 @@ function onMessage(msg) {
  * Previously selected message is cleared if the user gives bad input for this.
  */
 function selectMessage(msg, parts) {
-	const usage = '\nUsage: `select <channel_id> <message_id>`';
+	const usage = '\nUsage: `select <channel> <message_id>`';
 
 	let maybeChannelId = parts.shift();
 	let maybeMessageId = parts.shift();
@@ -204,27 +204,51 @@ function selectMessage(msg, parts) {
  * Associate an emoji reaction with a role for the currently selected message.
  */
 function setupReactRole(msg, parts) {
+	const usage = '\nUsage: `role-add <emoji> <role>`'
+		+ '\nNote: Custom emojis are not yet supported (coming soon)!';
+
 	// TODO handle custom emojis
-	// TODO handle invalid emoji
 	let emoji = parts.shift();
+	let maybeRole  = parts.shift();
 
-	// TODO handle raw ID in addition to mention
-	// TODO handle invalid ID
-	// TODO handle missing ID
-	let role = extractRoleId(parts.shift());
+	let roleId = extractId(maybeRole);
 
-	// TODO warn when no message is selected
-	// TODO warn when using custom emojis
-	// TODO handle error this function throws
+	let issue;
+	if (parts.length > 0) issue = 'Too many arguments!';
+	else if (!emoji)      issue = 'Missing emoji!';
+	else if (!maybeRole)  issue = 'Missing role!';
+	else if (!roleId) issue = `Invalid role \`${maybeRole}\`!`;
+
+	if (issue) {
+		msg.reply(issue + usage);
+		return;
+	}
+
 	let userId = msg.author.id;
 
-	cache.addEmojiRole(userId, emoji, role)
+	cache.addEmojiRole(userId, emoji, roleId)
 		.then(() => cache.getSelectedMessage(userId))
 		.then(selectedMessage => selectedMessage.react(emoji))
 		.then(reaction => msg.reply(
-			`mapped ${emoji} to <@&${role}> on message \`${reaction.message.id}\``
+			`mapped ${emoji} to <@&${roleId}> on message \`${reaction.message.id}\``
 		))
-		.catch(logError);
+		.catch(err => {
+			if (err.message === 'No message selected!') {
+				msg.reply('You need to select a message first!');
+			}
+			else if (err.message === 'Unknown Emoji') {
+				msg.reply(`I can't find an emoji with ID \`${emoji}\``);
+			}
+			else if (err.message === 'Missing Permissions') {
+				msg.reply("I don't have permission to react to the selected message");
+			}
+			else {
+				msg.reply(
+					`I got an error I don't recognize:\n\`${err.message}\``
+				);
+				logError(err);
+			}
+		});
 }
 
 /**

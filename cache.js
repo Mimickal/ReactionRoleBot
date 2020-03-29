@@ -33,7 +33,7 @@ function selectMessage(user_id, message) {
  * Gets the message the given user currently has selected, or null if the user
  * has no message selected.
  */
-async function getSelectedMessage(user_id) {
+function getSelectedMessage(user_id) {
 	let message = selectedMessages.get(user_id);
 	if (!message) {
 		throw new Error('No message selected!');
