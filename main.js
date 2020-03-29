@@ -212,7 +212,6 @@ function setupReactRole(msg, parts) {
 	let maybeRole  = parts.shift();
 
 	let emoji    = extractEmoji(rawEmoji);
-	// TODO need to validate this role actually exists
 	let roleId = extractId(maybeRole);
 
 	let issue;
@@ -228,7 +227,14 @@ function setupReactRole(msg, parts) {
 
 	let userId = msg.author.id;
 
-	cache.addEmojiRole(userId, emoji, roleId)
+	msg.guild.roles.fetch(roleId)
+		.then(role => {
+			if (!role) {
+				throw new Error('Invalid Role');
+			}
+
+			return cache.addEmojiRole(userId, emoji, roleId);
+		})
 		.then(() => cache.getSelectedMessage(userId))
 		.then(selectedMessage => selectedMessage.react(emoji))
 		.then(reaction => msg.reply(
@@ -237,6 +243,9 @@ function setupReactRole(msg, parts) {
 		.catch(err => {
 			if (err.message === 'No message selected!') {
 				msg.reply('You need to select a message first!');
+			}
+			else if (err.message === 'Invalid Role') {
+				msg.reply(`I can't find a role with ID \`${roleId}\``);
 			}
 			else if (err.message === 'Unknown Emoji') {
 				msg.reply(`I can't find an emoji with ID \`${emoji}\`` + usage);
