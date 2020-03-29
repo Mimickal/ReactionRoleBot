@@ -28,8 +28,9 @@ function selectMessage(user_id, message) {
 }
 
 /**
- * Gets the message the given user currently has selected, or null if the user
- * has no message selected.
+ * Gets the message the given user currently has selected.
+ *
+ * Throws an exception if the user has no message selected.
  */
 function getSelectedMessage(user_id) {
 	let message = selectedMessages.get(user_id);
@@ -83,7 +84,7 @@ async function removeEmojiRole(user_id, emoji_id) {
 	if (role_id) {
 		return database.removeRoleReact(args);
 	} else {
-		throw new Error(`No role mapping found for emoji ${emoji_id}!`);
+		throw new Error('No role mapping found');
 	}
 }
 

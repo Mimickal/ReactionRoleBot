@@ -277,14 +277,10 @@ function removeReactRole(msg, parts) {
 		.then(selectedMessage => {
 			let emojiReacts = selectedMessage.reactions.cache.get(emoji);
 
-			// FIXME if someone removes the reactions from the message, this will
-			// short circuit without actually removing the record from the DB.
-			if (!emojiReacts) {
-				throw new Error('No reaction for emoji');
-			}
-
-			return emojiReacts.remove()
-				.then(() => cache.removeEmojiRole(userId, emoji))
+			return Promise.all([
+					emojiReacts ? emojiReacts.remove() : Promise.resolve(),
+					cache.removeEmojiRole(userId, emoji)
+				])
 				.then(() => msg.reply(
 					`removed ${rawEmoji} role from message \`${selectedMessage.id}\``
 				));
@@ -293,7 +289,7 @@ function removeReactRole(msg, parts) {
 			if (err.message === 'No message selected!') {
 				msg.reply('You need to select a message first!');
 			}
-			else if (err.message === 'No reaction for emoji') {
+			else if (err.message === 'No role mapping found') {
 				msg.reply(
 					`Selected message does not have ${rawEmoji} reaction.\n` +
 					'If that displayed as a raw ID instead of an emoji, you ' +
