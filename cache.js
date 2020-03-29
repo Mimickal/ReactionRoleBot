@@ -72,7 +72,7 @@ async function addEmojiRole(user_id, emoji_id, role_id) {
  *   - If the message did not have a mapping for the given emoji.
  */
 async function removeEmojiRole(user_id, emoji_id) {
-	let message = await getSelectedMessage(user_id);
+	let message = getSelectedMessage(user_id);
 
 	let args = {
 		message_id: message.id,
@@ -81,7 +81,7 @@ async function removeEmojiRole(user_id, emoji_id) {
 
 	let role_id = await database.getRoleReact(args);
 	if (role_id) {
-		database.removeRoleReact(args);
+		return database.removeRoleReact(args);
 	} else {
 		throw new Error(`No role mapping found for emoji ${emoji_id}!`);
 	}

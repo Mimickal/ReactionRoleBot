@@ -277,6 +277,8 @@ function removeReactRole(msg, parts) {
 		.then(selectedMessage => {
 			let emojiReacts = selectedMessage.reactions.cache.get(emoji);
 
+			// FIXME if someone removes the reactions from the message, this will
+			// short circuit without actually removing the record from the DB.
 			if (!emojiReacts) {
 				throw new Error('No reaction for emoji');
 			}
