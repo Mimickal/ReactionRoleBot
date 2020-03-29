@@ -1,7 +1,7 @@
 {
   "name": "reactionrolebot",
   "version": "1.0.0",
-  "description": "Basic, no BS Discord bot that can assign / unassign roles with message reactions ",
+  "description": "I'm a basic, no BS Discord bot that can assign / unassign roles with message reactions. I am completely free and open source, and always will be.",
   "main": "main.js",
   "dependencies": {
     "discord.js": "github:discordjs/discord.js#master",
@@ -19,9 +19,9 @@
     "url": "git+https://github.com/Mimickal/ReactionRoleBot.git"
   },
   "author": "Mia Moretti",
-  "license": "GPL-3.0",
+  "license": "AGPL-3.0",
   "bugs": {
     "url": "https://github.com/Mimickal/ReactionRoleBot/issues"
   },
-  "homepage": "https://github.com/Mimickal/ReactionRoleBot#readme"
+  "homepage": "https://github.com/Mimickal/ReactionRoleBot"
 }

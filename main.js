@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * This file is part of ReactionRoleBot, a role-assigning Discord bot.
+ * Copyright (C) 2020 Mimickal (Mia Moretti).
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ ******************************************************************************/
 const fs = require('fs');
 
 const Discord = require('discord.js');
@@ -22,6 +38,7 @@ const COMMANDS = new Map();
 COMMANDS.set('select', selectMessage);
 COMMANDS.set('role-add', setupReactRole);
 COMMANDS.set('role-remove', removeReactRole);
+COMMANDS.set('info', sayInfo);
 
 
 const Events = Discord.Constants.Events;
@@ -112,7 +129,10 @@ function onMessage(msg) {
 		return;
 	}
 
-	if (!msg.member.hasPermission(Discord.Permissions.FLAGS.ADMINISTRATOR)) {
+	if (
+		!msg.member.hasPermission(Discord.Permissions.FLAGS.ADMINISTRATOR)
+		&& cmdName !== 'info' // FIXME You know why this is bad.
+	) {
 		msg.reply("You don't have permission to use that command");
 		return;
 	}
@@ -226,6 +246,19 @@ function removeReactRole(msg, parts) {
 			))
 		)
 		.catch(logError);
+}
+
+/**
+ * Replies with info about this bot, including a link to the source code to be
+ * compliant with the AGPLv3 this bot is licensed under.
+ */
+function sayInfo(msg) {
+	const info = require('./package.json');
+	msg.reply(
+		`${info.description}\n` +
+		`**Running version:** ${info.version}\n` +
+		`**Source code:** ${info.homepage}`
+	);
 }
 
 /**
