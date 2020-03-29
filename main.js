@@ -116,7 +116,7 @@ function onMessage(msg) {
 	let msgParts = msg.content.split(/\s+/);
 
 	// Only pay attention to messages where we're mentioned first.
-	let mentionUserId = extractUserId(msgParts.shift());
+	let mentionUserId = extractId(msgParts.shift());
 	if (mentionUserId !== client.user.id) {
 		return;
 	}
@@ -206,13 +206,13 @@ function selectMessage(msg, parts) {
  * Associate an emoji reaction with a role for the currently selected message.
  */
 function setupReactRole(msg, parts) {
-	const usage = '\nUsage: `role-add <emoji> <role>`'
-		+ '\nNote: Custom emojis are not yet supported (coming soon)!';
+	const usage = '\nUsage: `role-add <emoji> <role>`';
 
-	// TODO handle custom emojis
-	let emoji = parts.shift();
+	let rawEmoji = parts.shift(); // Needed to print emoji in command response
 	let maybeRole  = parts.shift();
 
+	let emoji    = extractEmoji(rawEmoji);
+	// TODO need to validate this role actually exists
 	let roleId = extractId(maybeRole);
 
 	let issue;
@@ -232,7 +232,7 @@ function setupReactRole(msg, parts) {
 		.then(() => cache.getSelectedMessage(userId))
 		.then(selectedMessage => selectedMessage.react(emoji))
 		.then(reaction => msg.reply(
-			`mapped ${emoji} to <@&${roleId}> on message \`${reaction.message.id}\``
+			`mapped ${rawEmoji} to <@&${roleId}> on message \`${reaction.message.id}\``
 		))
 		.catch(err => {
 			if (err.message === 'No message selected!') {
@@ -256,11 +256,10 @@ function setupReactRole(msg, parts) {
  * message.
  */
 function removeReactRole(msg, parts) {
-	const usage = '\nUsage: `role-remove <emoji>`'
-		+ '\nNote: Custom emojis are not yet supported (coming soon)!';
+	const usage = '\nUsage: `role-remove <emoji>`';
 
-	// TODO handle custom emojis
-	let emoji = parts.shift();
+	let rawEmoji = parts.shift();
+	let emoji    = extractEmoji(rawEmoji);
 
 	let issue;
 	if (parts.length > 0) issue = 'Too many arguments!';
@@ -285,7 +284,7 @@ function removeReactRole(msg, parts) {
 			return emojiReacts.remove()
 				.then(() => cache.removeEmojiRole(userId, emoji))
 				.then(() => msg.reply(
-					`removed ${emoji} role from message \`${selectedMessage.id}\``
+					`removed ${rawEmoji} role from message \`${selectedMessage.id}\``
 				));
 		})
 		.catch(err => {
@@ -294,7 +293,7 @@ function removeReactRole(msg, parts) {
 			}
 			else if (err.message === 'No reaction for emoji') {
 				msg.reply(
-					`Selected message does not have ${emoji} reaction.\n` +
+					`Selected message does not have ${rawEmoji} reaction.\n` +
 					'If that displayed as a raw ID instead of an emoji, you ' +
 					'might be using the wrong ID.'
 				);
@@ -333,7 +332,9 @@ function onReactionAdd(reaction, user) {
 		return;
 	}
 
-	cache.getReactRole(reaction.message.id, reaction.emoji.name)
+	let emoji = emojiIdFromEmoji(reaction.emoji);
+
+	cache.getReactRole(reaction.message.id, emoji)
 		.then(roleId => {
 			if (!roleId) {
 				return;
@@ -359,7 +360,9 @@ function onReactionRemove(reaction, user) {
 		return;
 	}
 
-	cache.getReactRole(reaction.message.id, reaction.emoji.name)
+	let emoji = emojiIdFromEmoji(reaction.emoji);
+
+	cache.getReactRole(reaction.message.id, emoji)
 		.then(roleId => {
 			if (!roleId) {
 				return;
@@ -388,15 +391,6 @@ function extractId(str) {
 	return match ? match[1] : null;
 }
 
-function extractUserId(str) {
-	let match = str.match(/<@!(\d{17,19})>/);
-	return match ? match[1] : null;
-}
-
-function extractRoleId(str) {
-	return str.match(/<@&(\d{17,19})>/)[1];
-}
-
 /**
  * Allows us to handle custom server emojis. They are encoded in messages like
  * this: <:flagtg:681985787864416286>. Discord.js can add emojis using a
@@ -406,6 +400,14 @@ function extractRoleId(str) {
 function extractEmoji(emoji) {
 	let match = emoji.match(/<:.+:(\d{17,19})>/);
 	return match ? match[1] : emoji;
+}
+
+/**
+ * Built-in emojis are identified by name. Custom emojis are identified by ID.
+ * This function handles that nuance for us.
+ */
+function emojiIdFromEmoji(emoji) {
+	return emoji.id || emoji.name;
 }
 
 function logError(err) {
@@ -463,6 +465,3 @@ async function onRemoveReaction(reaction) {
 	console.log(emojiIdFromEmoji(reaction.emoji), reaction.user_id);
 }
 
-function emojiIdFromEmoji(emoji) {
-	return emoji.id || emoji.name;
-}

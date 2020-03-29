@@ -19,8 +19,6 @@ const database = require('./database');
 // The live cache of selected messages for each user.
 const selectedMessages = new Map();
 
-// TODO we need a way to handle custom emojis too
-
 /**
  * Selects a message to use for each subsequent command the user enters.
  */
