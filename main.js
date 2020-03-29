@@ -178,19 +178,21 @@ function selectMessage(msg, parts) {
 			);
 		})
 		.catch(err => {
+			// The user is trying to select a new message, so at least clear
+			// their old selection. Principle of least surprise, and all that...
 			cache.clearSelectedMessage(msg.author.id);
 
 			let errMsg;
-			if (err.message.match(/Unknown Channel/)) {
+			if (err.message === 'Unknown Channel') {
 				errMsg = "I can't find a channel in this server with ID "
 					+ `\`${channelId}\`.`;
 			}
-			else if (err.message.match(/Unknown Message/)) {
+			else if (err.message === 'Unknown Message') {
 				errMsg = `I can't find a message with ID \`${messageId}\` `
 					+ `in channel <#${channelId}>.`;
 			}
 			else {
-				errMsg = 'Idk man something went wrong. Try again?';
+				errMsg = `I got an error I don't recognize:\n\`${err.message}\``;
 				logError(err, 'For message', msg.content);
 			}
 
@@ -237,16 +239,14 @@ function setupReactRole(msg, parts) {
 				msg.reply('You need to select a message first!');
 			}
 			else if (err.message === 'Unknown Emoji') {
-				msg.reply(`I can't find an emoji with ID \`${emoji}\``);
+				msg.reply(`I can't find an emoji with ID \`${emoji}\`` + usage);
 			}
 			else if (err.message === 'Missing Permissions') {
 				msg.reply("I don't have permission to react to the selected message");
 			}
 			else {
-				msg.reply(
-					`I got an error I don't recognize:\n\`${err.message}\``
-				);
-				logError(err);
+				msg.reply(`I got an error I don't recognize:\n\`${err.message}\``);
+				logError(err, 'For message', msg.content);
 			}
 		});
 }
