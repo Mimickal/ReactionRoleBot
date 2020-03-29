@@ -256,20 +256,57 @@ function setupReactRole(msg, parts) {
  * message.
  */
 function removeReactRole(msg, parts) {
+	const usage = '\nUsage: `role-remove <emoji>`'
+		+ '\nNote: Custom emojis are not yet supported (coming soon)!';
+
 	// TODO handle custom emojis
-	// TODO handle invalid emoji
-	// TODO handle missing emoji
 	let emoji = parts.shift();
+
+	let issue;
+	if (parts.length > 0) issue = 'Too many arguments!';
+	else if (!emoji)      issue = 'Missing emoji!';
+
+	if (issue) {
+		msg.reply(issue + usage);
+		return;
+	}
+
 	let userId = msg.author.id;
 
-	cache.getSelectedMessage(userId)
-		.then(selectedMessage => selectedMessage.cache.get(emoji).remove()
-			.then(() => cache.removeEmojiRole(userId, emoji))
-			.then(() => msg.reply(
-				`removed ${emoji} role from message \`${selectedMessage.id}\``
-			))
-		)
-		.catch(logError);
+	Promise.resolve() // Hack to pass error from getSelectedMessage to .catch
+		.then(() => cache.getSelectedMessage(userId))
+		.then(selectedMessage => {
+			let emojiReacts = selectedMessage.reactions.cache.get(emoji);
+
+			if (!emojiReacts) {
+				throw new Error('No reaction for emoji');
+			}
+
+			return emojiReacts.remove()
+				.then(() => cache.removeEmojiRole(userId, emoji))
+				.then(() => msg.reply(
+					`removed ${emoji} role from message \`${selectedMessage.id}\``
+				));
+		})
+		.catch(err => {
+			if (err.message === 'No message selected!') {
+				msg.reply('You need to select a message first!');
+			}
+			else if (err.message === 'No reaction for emoji') {
+				msg.reply(
+					`Selected message does not have ${emoji} reaction.\n` +
+					'If that displayed as a raw ID instead of an emoji, you ' +
+					'might be using the wrong ID.'
+				);
+			}
+			else if (err.message === 'Missing Permissions') {
+				msg.reply("I don't have permission to modify the selected message");
+			}
+			else {
+				msg.reply(`I got an error I don't recognize:\n\`${err.message}\``);
+				logError(err, 'For message', msg.content);
+			}
+		});
 }
 
 /**
