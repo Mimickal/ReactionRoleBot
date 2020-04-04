@@ -424,6 +424,10 @@ function extractId(str) {
  * (e.g. 681985787864416286) for custom server emojis.
  */
 function extractEmoji(emoji) {
+	if (!emoji) {
+		return null;
+	}
+
 	let match = emoji.match(/<:.+:(\d{17,19})>/);
 	return match ? match[1] : emoji;
 }
