@@ -35,10 +35,25 @@ const token = fs.readFileSync(token_file).toString().trim();
 
 // Map of command names to handling functions. Doubles as a validator.
 const COMMANDS = new Map();
-COMMANDS.set('select', selectMessage);
-COMMANDS.set('role-add', setupReactRole);
-COMMANDS.set('role-remove', removeReactRole);
-COMMANDS.set('info', sayInfo);
+cmdDef(selectMessage,
+	'select', '<channel|channel_id> <message_id>',
+	`Selects the message to perform actions on. This is per-user, so multiple
+	people can be setting up roles on different messages (or the same one).`
+);
+cmdDef(setupReactRole,
+	'role-add', '<emoji> <role|role_id>',
+	`Creates an emoji-role on the selected message. The bot will automatically
+	react to the message with this emoji.`
+);
+cmdDef(removeReactRole,
+	'role-remove', '<emoji>',
+	`Removes the emoji-role from the message. The bot will remove all reactions
+	of this emoji from the message.`
+);
+cmdDef(sayInfo,
+	'info', '',
+	'Prints description, version, and link to source code for the bot'
+);
 
 
 const Events = Discord.Constants.Events;
@@ -137,8 +152,7 @@ function onMessage(msg) {
 		return;
 	}
 
-	// Run the handler for this command
-	COMMANDS.get(cmdName)(msg, msgParts);
+	COMMANDS.get(cmdName).get('handler')(msg, msgParts);
 }
 
 /**
@@ -423,6 +437,27 @@ function extractEmoji(emoji) {
  */
 function emojiIdFromEmoji(emoji) {
 	return emoji.id || emoji.name;
+}
+
+/**
+ * Helper for creating command definitions. We could nest these in raw objects,
+ * but Maps are nicer.
+ */
+function cmdDef(handler, name, usage, description) {
+	let map = new Map();
+	map.set('handler', handler);
+	map.set('usage', `${name} ${usage}`);
+	map.set('desc', unindent(description));
+	COMMANDS.set(name, map);
+}
+
+/**
+ * Allows us to treat multi-line template strings as a single continuous line.
+ */
+function unindent(str) {
+	return str
+		.replace(/^\s*/, '')
+		.replace(/\n\t*/g, ' ');
 }
 
 /**
