@@ -54,6 +54,10 @@ cmdDef(sayInfo,
 	'info', '',
 	'Prints description, version, and link to source code for the bot'
 );
+cmdDef(sayHelp,
+	'help', '',
+	'Prints this help text'
+);
 
 
 const Events = Discord.Constants.Events;
@@ -344,6 +348,20 @@ function sayInfo(msg) {
 }
 
 /**
+ * Replies with a list of commands and their usage information.
+ */
+function sayHelp(msg) {
+	let embed = new Discord.MessageEmbed()
+		.setTitle('Commands Help');
+
+	COMMANDS.forEach((def, name) => embed.addField(
+		name, def.get('description') + def.get('usage')
+	));
+
+	msg.reply(embed).catch(logError);
+}
+
+/**
  * Event handler for when a reaction is added to a message.
  * Checks if the message has any reaction roles configured, assigning a role to
  * the user who added the reaction, if applicable. Ignores reacts added by this
@@ -448,7 +466,7 @@ function cmdDef(handler, name, usage, description) {
 	let map = new Map();
 	map.set('handler', handler);
 	map.set('usage', `\nUsage: \`${name} ${usage}\``);
-	map.set('desc', unindent(description));
+	map.set('description', unindent(description));
 	COMMANDS.set(name, map);
 }
 
