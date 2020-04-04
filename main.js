@@ -180,7 +180,7 @@ function selectMessage(msg, parts) {
 	else if (!messageId) issue = `Invalid message_id \`${maybeMessageId}\`!`;
 
 	if (issue) {
-		msg.reply(issue + COMMANDS.get('select').get('usage'));
+		msg.reply(issue + usage('select'));
 		cache.clearSelectedMessage(msg.author.id);
 		return;
 	}
@@ -214,7 +214,7 @@ function selectMessage(msg, parts) {
 				logError(err, 'For message', msg.content);
 			}
 
-			errMsg += COMMANDS.get('select').get('usage');
+			errMsg += usage('select');
 
 			msg.reply(errMsg);
 		});
@@ -239,7 +239,7 @@ function setupReactRole(msg, parts) {
 	else if (!roleId) issue = `Invalid role \`${maybeRole}\`!`;
 
 	if (issue) {
-		msg.reply(issue + COMMANDS.get('role-add').get('usage'));
+		msg.reply(issue + usage('role-add'));
 		return;
 	}
 
@@ -268,7 +268,7 @@ function setupReactRole(msg, parts) {
 			else if (err.message === 'Unknown Emoji') {
 				msg.reply(
 					`I can't find an emoji with ID \`${emoji}\``
-					+ COMMANDS.get('role-add').get('usage')
+					+ usage('role-add')
 				);
 			}
 			else if (err.message === 'Missing Permissions') {
@@ -294,7 +294,7 @@ function removeReactRole(msg, parts) {
 	else if (!emoji)      issue = 'Missing emoji!';
 
 	if (issue) {
-		msg.reply(issue + COMMANDS.get('role-remove').get('usage'));
+		msg.reply(issue + usage('role-remove'));
 		return;
 	}
 
@@ -354,8 +354,8 @@ function sayHelp(msg) {
 	let embed = new Discord.MessageEmbed()
 		.setTitle('Commands Help');
 
-	COMMANDS.forEach((def, name) => embed.addField(
-		name, def.get('description') + def.get('usage')
+	COMMANDS.forEach(def => embed.addField(
+		def.get('usage'), def.get('description')
 	));
 
 	msg.reply(embed).catch(logError);
@@ -465,9 +465,16 @@ function emojiIdFromEmoji(emoji) {
 function cmdDef(handler, name, usage, description) {
 	let map = new Map();
 	map.set('handler', handler);
-	map.set('usage', `\nUsage: \`${name} ${usage}\``);
+	map.set('usage', `\`${name} ${usage}\``);
 	map.set('description', unindent(description));
 	COMMANDS.set(name, map);
+}
+
+/**
+ * Dress up usage string for a command.
+ */
+function usage(name) {
+	return `\nUsage: ${COMMANDS.get(name).get('usage')}`;
 }
 
 /**
