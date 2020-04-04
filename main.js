@@ -162,8 +162,6 @@ function onMessage(msg) {
 function selectMessage(msg, parts) {
 	// TODO support selection by URL
 
-	const usage = '\nUsage: `select <channel> <message_id>`';
-
 	let maybeChannelId = parts.shift();
 	let maybeMessageId = parts.shift();
 
@@ -172,13 +170,13 @@ function selectMessage(msg, parts) {
 
 	let issue;
 	if      (parts.length > 0) issue = 'Too many arguments!';
-	else if (!maybeChannelId)  issue = 'Missing channel_id!';
+	else if (!maybeChannelId)  issue = 'Missing channel!';
 	else if (!maybeMessageId)  issue = 'Missing message_id!';
 	else if (!channelId) issue = `Invalid channel_id \`${maybeChannelId}\`!`;
 	else if (!messageId) issue = `Invalid message_id \`${maybeMessageId}\`!`;
 
 	if (issue) {
-		msg.reply(issue + usage);
+		msg.reply(issue + COMMANDS.get('select').get('usage'));
 		cache.clearSelectedMessage(msg.author.id);
 		return;
 	}
@@ -212,7 +210,7 @@ function selectMessage(msg, parts) {
 				logError(err, 'For message', msg.content);
 			}
 
-			errMsg += usage;
+			errMsg += COMMANDS.get('select').get('usage');
 
 			msg.reply(errMsg);
 		});
@@ -224,12 +222,10 @@ function selectMessage(msg, parts) {
 function setupReactRole(msg, parts) {
 	// TODO do we want to warn when two emojis map to the same role?
 
-	const usage = '\nUsage: `role-add <emoji> <role>`';
-
 	let rawEmoji = parts.shift(); // Needed to print emoji in command response
 	let maybeRole  = parts.shift();
 
-	let emoji    = extractEmoji(rawEmoji);
+	let emoji  = extractEmoji(rawEmoji);
 	let roleId = extractId(maybeRole);
 
 	let issue;
@@ -239,7 +235,7 @@ function setupReactRole(msg, parts) {
 	else if (!roleId) issue = `Invalid role \`${maybeRole}\`!`;
 
 	if (issue) {
-		msg.reply(issue + usage);
+		msg.reply(issue + COMMANDS.get('role-add').get('usage'));
 		return;
 	}
 
@@ -266,7 +262,10 @@ function setupReactRole(msg, parts) {
 				msg.reply(`I can't find a role with ID \`${roleId}\``);
 			}
 			else if (err.message === 'Unknown Emoji') {
-				msg.reply(`I can't find an emoji with ID \`${emoji}\`` + usage);
+				msg.reply(
+					`I can't find an emoji with ID \`${emoji}\``
+					+ COMMANDS.get('role-add').get('usage')
+				);
 			}
 			else if (err.message === 'Missing Permissions') {
 				msg.reply("I don't have permission to react to the selected message");
@@ -283,8 +282,6 @@ function setupReactRole(msg, parts) {
  * message.
  */
 function removeReactRole(msg, parts) {
-	const usage = '\nUsage: `role-remove <emoji>`';
-
 	let rawEmoji = parts.shift();
 	let emoji    = extractEmoji(rawEmoji);
 
@@ -293,7 +290,7 @@ function removeReactRole(msg, parts) {
 	else if (!emoji)      issue = 'Missing emoji!';
 
 	if (issue) {
-		msg.reply(issue + usage);
+		msg.reply(issue + COMMANDS.get('role-remove').get('usage'));
 		return;
 	}
 
@@ -446,7 +443,7 @@ function emojiIdFromEmoji(emoji) {
 function cmdDef(handler, name, usage, description) {
 	let map = new Map();
 	map.set('handler', handler);
-	map.set('usage', `${name} ${usage}`);
+	map.set('usage', `\nUsage: \`${name} ${usage}\``);
 	map.set('desc', unindent(description));
 	COMMANDS.set(name, map);
 }
