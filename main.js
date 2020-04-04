@@ -61,7 +61,7 @@ cmdDef(sayHelp,
 
 
 const Events = Discord.Constants.Events;
-client.on(Events.CLIENT_READY, () => console.log(`Logged in as ${client.user.tag}`));
+client.on(Events.CLIENT_READY, onReady);
 client.on(Events.GUILD_CREATE, onGuildJoin);
 client.on(Events.GUILD_DELETE, onGuildLeave);
 client.on(Events.MESSAGE_CREATE, onMessage);
@@ -73,6 +73,23 @@ client.login(token).catch(err => {
 	logError(err);
 	process.exit(1);
 });
+
+/**
+ * Event handler for when the bot is logged in.
+ */
+function onReady() {
+	console.log(`Logged in as ${client.user.tag}`);
+
+	// No idea why Discord.js does stuff like this...
+	// https://github.com/discordjs/discord.js/blob/master/src/util/Constants.js#L431
+	const LISTENING = 2;
+	client.user.setPresence({
+		activity: {
+			name: "'help' for commands",
+			type: Discord.Constants.ActivityTypes[LISTENING]
+		}
+	}).catch(logError);
+}
 
 /**
  * Event handler for when the bot joins a new guild.
