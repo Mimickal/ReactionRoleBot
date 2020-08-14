@@ -89,6 +89,24 @@ async function removeEmojiRole(user_id, emoji_id) {
 }
 
 /**
+ * Removes all emoji-role associations from the message the user has selected.
+ *
+ * Throws an exception:
+ *   - If the user has no message selected.
+ *   - If the message did not have any emojis mappings on it.
+ */
+async function removeAllEmojiRoles(user_id) {
+	let message = getSelectedMessage(user_id);
+
+	let rows = await database.removeAllRoleReacts(message.id);
+	if (rows === 0) {
+		throw new Error('No role mapping found');
+	}
+
+	return message;
+}
+
+/**
  * Gets the role mapped to the given emoji on the given message, or null if
  * there's no role associated with it (or if the message is unknown).
  */
@@ -105,5 +123,6 @@ module.exports = {
 	clearSelectedMessage,
 	addEmojiRole,
 	removeEmojiRole,
+	removeAllEmojiRoles,
 	getReactRole
 };

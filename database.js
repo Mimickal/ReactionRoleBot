@@ -60,6 +60,13 @@ function removeRoleReact(args) {
 }
 
 /**
+ * Removes all emoji->role mappings for the given message.
+ */
+function removeAllRoleReacts(message_id) {
+	return knex(REACTS).where('message_id', message_id).del();
+}
+
+/**
  * Returns the role for the given emoji on the given message, or null if there
  * is no role associated with the emoji on the message.
  */
@@ -103,6 +110,7 @@ module.exports = {
 	REACTS,
 	addRoleReact,
 	removeRoleReact,
+	removeAllRoleReacts,
 	getRoleReact,
 	getRoleReactMap,
 	clearGuildInfo

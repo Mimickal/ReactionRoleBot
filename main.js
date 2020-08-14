@@ -50,6 +50,11 @@ cmdDef(removeReactRole,
 	`Removes the emoji-role from the message. The bot will remove all reactions
 	of this emoji from the message.`
 );
+cmdDef(removeAllReacts,
+	'role-remove-all', '',
+	`Removes all emoji-roles and reactions from the message. This will **not**
+	remove existing roles from users.`
+);
 cmdDef(sayInfo,
 	'info', '',
 	'Prints description, version, and link to source code for the bot'
@@ -340,6 +345,43 @@ function removeReactRole(msg, parts) {
 					'If that displayed as a raw ID instead of an emoji, you ' +
 					'might be using the wrong ID.'
 				);
+			}
+			else if (err.message === 'Missing Permissions') {
+				msg.reply("I don't have permission to modify the selected message");
+			}
+			else {
+				msg.reply(`I got an error I don't recognize:\n\`${err.message}\``);
+				logError(err, 'For message', msg.content);
+			}
+		});
+}
+
+/**
+ * Removes all emoji-role associations from the currently selected message.
+ */
+function removeAllReacts(msg, parts) {
+	let issue;
+	if (parts.length > 0) issue = 'Too many arguments!';
+
+	if (issue) {
+		msg.reply(issue + usage('role-remove-all'));
+		return;
+	}
+
+	let userId = msg.author.id;
+
+	Promise.resolve() // Hack to pass all errors to .catch
+		.then(() => cache.removeAllEmojiRoles(userId))
+		.then(selectedMessage => selectedMessage.reactions.removeAll())
+		.then(selectedMessage => msg.reply(
+			`removed all roles from message \`${selectedMessage.id}\``
+		))
+		.catch(err => {
+			if (err.message === 'No role mapping found') {
+				msg.reply('Selected message does not have any role reactions.');
+			}
+			else if (err.message === 'No message selected!') {
+				msg.reply('You need to select a message first!');
 			}
 			else if (err.message === 'Missing Permissions') {
 				msg.reply("I don't have permission to modify the selected message");
