@@ -58,6 +58,23 @@ emoji from the selected post.
 @bot role-remove 🦊
 ```
 
+Removing all react-roles from a post. The bot will remove all reactions from the
+selected post, without removing any of the associated roles from the members who
+reacted to it. This is mostly useful to work around a limitation with Discord's
+API, since it treats admins removing reacts the same was as users removing
+reacts.
+```
+# Command
+@bot role-remove-all
+```
+
+Printing command usage info. If you'd rather the bot tell you how to use it,
+instead of looking at this page, you can use this command.
+```
+# Command
+@bot help
+```
+
 You can also print the bot's description, version number, and link to the source
 code. This command is available to all users.
 ```
