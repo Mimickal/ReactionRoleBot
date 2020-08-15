@@ -30,10 +30,10 @@ the channel with your role-react post, and have have following permissions:
 Note that these permissions may be inherited from your `@everyone` settings.
 
 You write the post people can react to for their roles. The bot will not attempt
-to write its own posts for this. Then you tell the bot which roles to map to
-which emojis for the selected post.
+to write its own posts for this. You can then tell the bot to select that post,
+and tell it which roles to map to which emoji reactions on that post.
 
-Selecting a post. The bot tracks this on a per-user basis, so multiple users can
+**Selecting a post** - The bot tracks this on a per-user basis, so multiple users can
 interact with the bot at the same time.
 ```
 # Command:
@@ -47,7 +47,7 @@ interact with the bot at the same time.
 @bot select https://discordapp.com/channels/123456789123456789/123456789123456789/123456789123456789
 ```
 
-Adding a role to the post. The bot will add its own reaction to the selected
+**Adding a role to the post** - The bot will add its own reaction to the selected
 post with the given emoji.
 ```
 # Command:
@@ -59,8 +59,9 @@ post with the given emoji.
 @bot role-add 🦊 1234556789123456789
 ```
 
-Removing a react-role from a post. The bot will remove all reactions of this
-emoji from the selected post.
+**Removing a react-role from a post** - The bot will remove all reactions of
+this emoji from the selected post, without removing the associated role from any
+user who reacted to the post.
 ```
 # Command
 @bot role-remove <emoji>
@@ -69,17 +70,17 @@ emoji from the selected post.
 @bot role-remove 🦊
 ```
 
-Removing all react-roles from a post. The bot will remove all reactions from the
-selected post, without removing any of the associated roles from the members who
-reacted to it. This is mostly useful to work around a limitation with Discord's
-API, since it treats admins removing reacts the same was as users removing
-reacts.
+**Removing all react-roles from a post** - The bot will remove all reactions
+from the selected post, without removing any of the associated roles from the
+members who reacted to it. This is mostly useful to work around a limitation
+with Discord's API, since it treats admins removing reacts the same was as users
+removing reacts.
 ```
 # Command
 @bot role-remove-all
 ```
 
-Printing command usage info. If you'd rather the bot tell you how to use it,
+**Printing command usage info** - If you'd rather the bot tell you how to use it,
 instead of looking at this page, you can use this command.
 ```
 # Command
