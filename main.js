@@ -454,6 +454,7 @@ function onReactionAdd(reaction, user) {
 			//      Need to do this so we can access guild on the message
 			return reaction.message.guild.members.fetch(user.id)
 				.then(member => member.roles.add(roleId, 'Role bot assignment'))
+				.then(() => database.incrementAssignCounter())
 				.then(() => console.log(`added role ${roleId} to ${user}`));
 		})
 		.catch(logError);

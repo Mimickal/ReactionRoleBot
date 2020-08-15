@@ -18,6 +18,7 @@ const knexfile = require('./knexfile');
 const knex = require('knex')(knexfile[process.env.NODE_ENV || 'development']);
 const lodash = require('lodash/object');
 
+const META = 'meta';
 const REACTS = 'reacts';
 const DISCORD_ID_LENGTH = {
 	MIN: 17,
@@ -105,14 +106,23 @@ function clearGuildInfo(guild_id) {
 	return knex(REACTS).where('guild_id', guild_id).del();
 }
 
+/**
+ * Increments the meta table's role assignment counter.
+ */
+function incrementAssignCounter(num) {
+	return knex(META).increment('assignments', num || 1);
+}
+
 module.exports = {
 	DISCORD_ID_LENGTH,
+	META,
 	REACTS,
 	addRoleReact,
 	removeRoleReact,
 	removeAllRoleReacts,
 	getRoleReact,
 	getRoleReactMap,
-	clearGuildInfo
+	clearGuildInfo,
+	incrementAssignCounter
 };
 
