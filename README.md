@@ -18,6 +18,17 @@ instance. Basically, there's no bullshit.
 You can interact with the bot by mentioning it (denoted here as `@bot`). The bot
 will currently only respond to users with the "Administrator" permissions.
 
+The role automatically created for the bot needs to be ordered above any role
+you want the bot to be able to assign. That role also needs to have access to
+the channel with your role-react post, and have have following permissions:
+* **Add Reactions** - To add the initial react to the post
+* **Manage Messages** - To remove all reacts from a post
+* **Manage roles** - To assign roles to users
+* **Read Message History** - To see posts in the channel before it joined
+* **Use External Emojis** - To use your custom emojis in role reacts
+* **Read Text Channels & See Voice Channels** - To see the role-react post
+Note that these permissions may be inherited from your `@everyone` settings.
+
 You write the post people can react to for their roles. The bot will not attempt
 to write its own posts for this. Then you tell the bot which roles to map to
 which emojis for the selected post.

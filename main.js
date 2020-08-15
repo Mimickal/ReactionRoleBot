@@ -102,15 +102,13 @@ function onReady() {
 function onGuildJoin(guild) {
 	guild.members.fetch(client.user.id)
 		.then(clientMember => {
+			// TODO update this to tell them how to add new users and use help
+			let info = "Hi there! My role needs to be ordered above any role " +
+				"you would like me to assign. You're getting this message " +
+				"because you are the server owner, but anybody with " +
+				"Administrator permissions can configure me.\n";
+
 			const Perms = Discord.Permissions.FLAGS;
-
-			// This bot probably shouldn't be given the admin permission, but if
-			// we have it then the other ones don't matter.
-			if (clientMember.hasPermission(Perms.ADMINISTRATOR)) {
-				return;
-			}
-
-			// Permissions integer: 1074078784
 			const requiredPermMap = {
 				[Perms.ADD_REACTIONS]: 'Add Reactions',
 				[Perms.MANAGE_MESSAGES]: 'Manage Messages',
@@ -120,18 +118,25 @@ function onGuildJoin(guild) {
 				[Perms.VIEW_CHANNEL]: 'Read Text Channels & See Voice Channels'
 			};
 
+			// This bot probably shouldn't be given the admin permission, but if
+			// we have it then the other ones don't matter.
+			// Also, these permissions can also be inherited from the server's
+			// @everyone permissions.
 			let missingPermNames = Object.entries(requiredPermMap)
-				.filter(([perm, name]) => clientMember.hasPermission(parseInt(perm)))
+				.filter(([perm, name]) => !clientMember.hasPermission(
+					parseInt(perm),
+					{ checkAdmin: true }
+				))
 				.map(([perm, name]) => name);
 
-			if (missingPermNames) {
-				return guild.owner.createDM()
-					.then(dmChannel => dmChannel.send(
-						"Heads up, I am missing the following permissions. " +
-						"Without them, I probably won't work right:\n" +
-						missingPermNames.join('\n')
-					));
+			if (missingPermNames.length > 0) {
+				info += "\nAlso, I am missing the following permissions. " +
+					"Without them, I probably won't work right:\n" +
+					missingPermNames.join('\n');
 			}
+
+			return guild.owner.createDM()
+				.then(dmChannel => dmChannel.send(info));
 		})
 		.catch(logError);
 }
