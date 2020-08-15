@@ -381,8 +381,9 @@ function removeAllReacts(msg, parts) {
 	let userId = msg.author.id;
 
 	Promise.resolve() // Hack to pass all errors to .catch
-		.then(() => cache.removeAllEmojiRoles(userId))
+		.then(() => cache.getSelectedMessage(userId))
 		.then(selectedMessage => selectedMessage.reactions.removeAll())
+		.then(() => cache.removeAllEmojiRoles(userId))
 		.then(selectedMessage => msg.reply(
 			`removed all roles from message \`${selectedMessage.id}\``
 		))
