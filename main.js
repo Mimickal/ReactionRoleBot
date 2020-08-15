@@ -154,6 +154,11 @@ function onGuildLeave(guild) {
  * Parses and delegates any role bot command.
  */
 function onMessage(msg) {
+	// Ignore DMs
+	if (msg.channel instanceof Discord.DMChannel) {
+		return;
+	}
+
 	// Ignore anything where we're not even mentioned
 	if (!msg.mentions.has(client.user)) {
 		return;
