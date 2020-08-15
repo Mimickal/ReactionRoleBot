@@ -113,6 +113,26 @@ function incrementAssignCounter(num) {
 	return knex(META).increment('assignments', num || 1);
 }
 
+/**
+ * Returns the following object of meta stats about the bot:
+ *   - guilds: <number of guilds the bot is active in>
+ *   - roles: <number of react-roles set up on the bot>
+ *   - assignments: <number of times a role has been assigned>
+ */
+function getMetaStats() {
+	return Promise.all([
+		knex(REACTS).distinct('guild_id').count().first(),
+		knex(REACTS).count().first(),
+		knex(META).select('assignments').first()
+	]).then(([res1, res2, res3]) => {
+		return {
+			guilds: res1['count(*)'],
+			roles: res2['count(*)'],
+			assignments: res3.assignments
+		};
+	});
+}
+
 module.exports = {
 	DISCORD_ID_LENGTH,
 	META,
@@ -123,6 +143,7 @@ module.exports = {
 	getRoleReact,
 	getRoleReactMap,
 	clearGuildInfo,
-	incrementAssignCounter
+	incrementAssignCounter,
+	getMetaStats
 };
 

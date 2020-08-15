@@ -410,11 +410,16 @@ function removeAllReacts(msg, parts) {
  */
 function sayInfo(msg) {
 	const info = require('./package.json');
-	msg.reply(
+	database.getMetaStats().then(stats => msg.reply(
 		`${info.description}\n` +
 		`**Running version:** ${info.version}\n` +
-		`**Source code:** ${info.homepage}`
-	);
+		`**Source code:** ${info.homepage}\n\n` +
+		'```Stats For Nerds\n' +
+		`  - Servers bot is active in: ${stats.guilds}\n` +
+		`  - Reaction role mappings:   ${stats.roles}\n` +
+		`  - Total role assignments:   ${stats.assignments}\n` +
+		'```'
+	));
 }
 
 /**
