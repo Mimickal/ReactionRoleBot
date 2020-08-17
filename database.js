@@ -134,6 +134,16 @@ function getMetaStats() {
 	});
 }
 
+/**
+ * Adds a new role that's allowed to configure this bot for the given guild.
+ */
+function addAllowedRole(args) {
+	// TODO sanity check values
+	let fields = lodash.pick(args, ['guild_id', 'role_id']);
+
+	return knex(PERMS).insert(fields);
+}
+
 module.exports = {
 	DISCORD_ID_LENGTH,
 	META,
@@ -146,6 +156,7 @@ module.exports = {
 	getRoleReactMap,
 	clearGuildInfo,
 	incrementAssignCounter,
-	getMetaStats
+	getMetaStats,
+	addAllowedRole
 };
 

@@ -55,6 +55,11 @@ cmdDef(removeAllReacts,
 	`Removes all emoji-roles and reactions from the message. This will **not**
 	remove existing roles from users.`
 );
+cmdDef(addPermissionRole,
+	'perm-add', '<role|role_id>',
+	`Adds a role that is allowed to configure this bot in this server. Note that
+	this role will be allowed to add more roles with this same permission.`
+);
 cmdDef(sayInfo,
 	'info', '',
 	'Prints description, version, and link to source code for the bot'
@@ -396,6 +401,49 @@ function removeAllReacts(msg, parts) {
 			}
 			else if (err.message === 'Missing Permissions') {
 				msg.reply("I don't have permission to modify the selected message");
+			}
+			else {
+				msg.reply(`I got an error I don't recognize:\n\`${err.message}\``);
+				logError(err, 'For message', msg.content);
+			}
+		});
+}
+
+/**
+ * Adds a role that is allowed to configure this bot's settings for a guild.
+ */
+function addPermissionRole(msg, parts) {
+	let maybeRole = parts.shift();
+	let roleId = extractId(maybeRole);
+
+	let issue;
+	if (parts.length > 0) issue = 'Too many arguments!';
+	else if (!maybeRole)  issue = 'Missing role!';
+	else if (!roleId)     issue = `Invalid role \`${maybeRole}\`!`;
+
+	if (issue) {
+		msg.reply(issue + usage('perm-add'));
+		return;
+	}
+
+	msg.guild.roles.fetch(roleId)
+		.then(role => {
+			if (!role) {
+				throw new Error('Invalid role');
+			}
+
+			return database.addAllowedRole({
+				guild_id: msg.guild.id,
+				role_id: role.id
+			});
+		})
+		.then(() => msg.reply(`Role <@&${roleId}> can now configure me!`))
+		.catch(err => {
+			if (err.message === 'Invalid Role') {
+				msg.reply(`I can't find a role with ID \`${roleId}\``);
+			}
+			else if (err.message.includes('UNIQUE constraint failed')) {
+				msg.reply(`Role <@&${roleId}> was already added.`);
 			}
 			else {
 				msg.reply(`I got an error I don't recognize:\n\`${err.message}\``);
