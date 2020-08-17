@@ -103,10 +103,10 @@ function onGuildJoin(guild) {
 	guild.members.fetch(client.user.id)
 		.then(clientMember => {
 			// TODO update this to tell them how to add new users and use help
-			let info = "Hi there! My role needs to be ordered above any role " +
-				"you would like me to assign. You're getting this message " +
-				"because you are the server owner, but anybody with " +
-				"Administrator permissions can configure me.\n";
+			let info = unindent(`Hi there! My role needs to be ordered above any
+				role you would like me to assign. You're getting this message
+				because you are the server owner, but anybody with Administrator
+				permissions can configure me.`);
 
 			const Perms = Discord.Permissions.FLAGS;
 			const requiredPermMap = {
@@ -130,9 +130,9 @@ function onGuildJoin(guild) {
 				.map(([perm, name]) => name);
 
 			if (missingPermNames.length > 0) {
-				info += "\nAlso, I am missing the following permissions. " +
-					"Without them, I probably won't work right:\n" +
-					missingPermNames.join('\n');
+				info += '\n\n' + unindent(`Also, I am missing the following
+					permissions. Without them, I probably won't work right:`) +
+					'\n' + missingPermNames.join('\n');
 			}
 
 			return guild.owner.createDM()
