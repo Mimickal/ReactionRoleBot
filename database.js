@@ -144,6 +144,16 @@ function addAllowedRole(args) {
 	return knex(PERMS).insert(fields);
 }
 
+/**
+ * Removes a role from being allowed to configure this bot for the given guild.
+ */
+function removeAllowedRole(args) {
+	// TODO sanity check values
+	let fields = lodash.pick(args, ['guild_id', 'role_id']);
+
+	return knex(PERMS).where(fields).del();
+}
+
 module.exports = {
 	DISCORD_ID_LENGTH,
 	META,
@@ -157,6 +167,7 @@ module.exports = {
 	clearGuildInfo,
 	incrementAssignCounter,
 	getMetaStats,
-	addAllowedRole
+	addAllowedRole,
+	removeAllowedRole
 };
 
