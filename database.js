@@ -19,6 +19,7 @@ const knex = require('knex')(knexfile[process.env.NODE_ENV || 'development']);
 const lodash = require('lodash/object');
 
 const META = 'meta';
+const PERMS = 'perms';
 const REACTS = 'reacts';
 const DISCORD_ID_LENGTH = {
 	MIN: 17,
@@ -136,6 +137,7 @@ function getMetaStats() {
 module.exports = {
 	DISCORD_ID_LENGTH,
 	META,
+	PERMS,
 	REACTS,
 	addRoleReact,
 	removeRoleReact,
