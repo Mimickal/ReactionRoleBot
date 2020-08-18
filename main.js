@@ -114,11 +114,10 @@ function onReady() {
 function onGuildJoin(guild) {
 	guild.members.fetch(client.user.id)
 		.then(clientMember => {
-			// TODO update this to tell them how to add new users and use help
 			let info = unindent(`Hi there! My role needs to be ordered above any
 				role you would like me to assign. You're getting this message
 				because you are the server owner, but anybody with Administrator
-				permissions can configure me.`);
+				permissions or an allowed role can configure me.`);
 
 			const Perms = Discord.Permissions.FLAGS;
 			const requiredPermMap = {
@@ -555,8 +554,6 @@ function onReactionAdd(reaction, user) {
 				return;
 			}
 
-			// TODO ensure reaction.message is a TextChannel and not a DM or something.
-			//      Need to do this so we can access guild on the message
 			return reaction.message.guild.members.fetch(user.id)
 				.then(member => member.roles.add(roleId, 'Role bot assignment'))
 				.then(() => database.incrementAssignCounter())
@@ -588,7 +585,6 @@ function onReactionRemove(reaction, user) {
 				return;
 			}
 
-			// TODO same as onReactionAdd, ensure this is a TextChannel
 			return reaction.message.guild.members.fetch(user.id)
 				.then(member => member.roles.remove(roleId, 'Role bot removal'))
 				.then(() => console.log(`removed role ${roleId} from ${user}`))
