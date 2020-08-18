@@ -154,6 +154,16 @@ function removeAllowedRole(args) {
 	return knex(PERMS).where(fields).del();
 }
 
+/**
+ * Returns the list of roles that can configure this bot for the given guild.
+ */
+function getAllowedRoles(guild_id) {
+	return knex(PERMS)
+		.select('role_id')
+		.where({ guild_id: guild_id })
+		.then(roleArray => roleArray.map(elem => elem.role_id));
+}
+
 module.exports = {
 	DISCORD_ID_LENGTH,
 	META,
@@ -168,6 +178,7 @@ module.exports = {
 	incrementAssignCounter,
 	getMetaStats,
 	addAllowedRole,
-	removeAllowedRole
+	removeAllowedRole,
+	getAllowedRoles
 };
 

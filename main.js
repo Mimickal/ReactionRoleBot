@@ -192,15 +192,15 @@ function onMessage(msg) {
 		return;
 	}
 
-	if (
-		!msg.member.hasPermission(Discord.Permissions.FLAGS.ADMINISTRATOR)
-		&& cmdName !== 'info' // FIXME You know why this is bad.
-	) {
-		msg.reply("You don't have permission to use that command");
-		return;
-	}
-
-	COMMANDS.get(cmdName).get('handler')(msg, msgParts);
+	userHasPermission(msg, cmdName)
+		.then(hasPerm => {
+			if (hasPerm) {
+				COMMANDS.get(cmdName).get('handler')(msg, msgParts);
+			} else {
+				msg.reply("You don't have permission to use that command");
+			}
+		})
+		.catch(logError);
 }
 
 /**
@@ -594,6 +594,23 @@ function onReactionRemove(reaction, user) {
 				.then(() => console.log(`removed role ${roleId} from ${user}`))
 		})
 		.catch(logError);
+}
+
+/**
+ * Given a message, determines if the sender has permission to use the bot.
+ * This may involve a database check, so it returns a Promise.
+ */
+function userHasPermission(msg, command_name) {
+	const everyoneCommands = ['info'];
+	if (
+		msg.member.hasPermission(Discord.Permissions.FLAGS.ADMINISTRATOR) ||
+		everyoneCommands.includes(command_name)
+	) {
+		return Promise.resolve(true);
+	}
+
+	return database.getAllowedRoles(msg.guild.id)
+		.then(roles => roles.some(role => msg.member.roles.cache.has(role)));
 }
 
 // I'm aware Discord.MessageMentions.*_PATTERN constants exist, but they all
