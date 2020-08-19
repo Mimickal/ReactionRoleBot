@@ -67,6 +67,11 @@ cmdDef(removePermissionRole,
 	and will then be unable to make further changes until an administrator
 	re-adds their permission.`
 );
+cmdDef(addMutexRoles,
+	'mutex-add', '<role1|role1_id> <role2|role2_id>',
+	`Makes two roles mutually exclusive. If a user attempts to add two mutually
+	exclusive roles, they will lose the first one they had.`
+);
 cmdDef(sayInfo,
 	'info', '',
 	'Prints description, version, and link to source code for the bot'
@@ -501,6 +506,66 @@ function removePermissionRole(msg, parts) {
 				logError(err, 'For message', msg.content);
 			}
 		});
+}
+
+/**
+ * Makes two roles mutually exclusive for a guild.
+ */
+function addMutexRoles(msg, parts) {
+	let maybeRole1 = parts.shift();
+	let maybeRole2 = parts.shift();
+
+	let roleId1 = extractId(maybeRole1);
+	let roleId2 = extractId(maybeRole2);
+
+	let issue;
+	if (parts.length > 0) issue = 'Too many arguments!';
+	else if (!maybeRole1) issue = 'Missing role 1!';
+	else if (!maybeRole2) issue = 'Missing role 2!';
+	else if (!roleId1)    issue = `Invalid role \`${maybeRole1}\`!`;
+	else if (!roleId2)    issue = `Invalid role \`${maybeRole2}\`!`;
+	else if (roleId1 == roleId2)
+		issue = 'Cannot make a role mutually exclusive with itself!';
+
+	if (issue) {
+		msg.reply(issue + usage('mutex-add'));
+		return;
+	}
+
+	Promise.all([
+		msg.guild.roles.fetch(roleId1),
+		msg.guild.roles.fetch(roleId2)
+	])
+	.then(([role1, role2]) => {
+		if (!role1) throw new Error('Invalid Role 1');
+		if (!role2) throw new Error('Invalid Role 2');
+
+		return database.addMutexRole({
+			guild_id: msg.guild.id,
+			role_id_1: role1.id,
+			role_id_2: role2.id
+		});
+	})
+	.then(() => msg.reply(
+		`Roles <@&${roleId1}> and <@&${roleId2}> are now mutually exclusive`
+	))
+	.catch(err => {
+		let match;
+		if (match = err.message.match(/Invalid Role (\d)/)) {
+			let cantFind = match[1] === '1' ? roleId1 : roleId2;
+			msg.reply(`I can't find a role with ID \`${cantFind}\``);
+		}
+		else if (err.message.includes('UNIQUE constraint failed')) {
+			msg.reply(unindent(
+				`Roles <@&${roleId1}> and <@&${roleId2}> are
+				already mutually exclusive`
+			));
+		}
+		else {
+			msg.reply(`I got an error I don't recognize:\n\`${err.message}\``);
+			logError(err, 'For message', msg.content);
+		}
+	});
 }
 
 /**

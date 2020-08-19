@@ -165,6 +165,32 @@ function getAllowedRoles(guild_id) {
 		.then(roleArray => roleArray.map(elem => elem.role_id));
 }
 
+/**
+ * Creates a mutually exclusive rule for two roles in the given guild.
+ * role_id_1 and role_id_2 are interchangable, so if there's already a record
+ * for roleA and roleB, attempting to add a record for roleB and roleA will
+ * throw a unique constraint violation exception.
+ */
+function addMutexRole(args) {
+	// TODO sanity check values
+	let fields = lodash.pick(args, ['guild_id', 'role_id_1', 'role_id_2']);
+
+	// Need to try role 1 and role 2 in reverse order too
+	let flipped = lodash.pick(args, ['guild_id']);
+	flipped.role_id_1 = fields.role_id_2;
+	flipped.role_id_2 = fields.role_id_1;
+
+	return knex(MUTEX)
+		.first()
+		.where(fields)
+		.then(record => {
+			// If record exists, insert it again to cause a unique constraint
+			// exception. If not, try to insert the fields in reverse order.
+			let version = record ? fields : flipped;
+			return knex(MUTEX).insert(version);
+		});
+}
+
 module.exports = {
 	DISCORD_ID_LENGTH,
 	META,
@@ -181,6 +207,7 @@ module.exports = {
 	getMetaStats,
 	addAllowedRole,
 	removeAllowedRole,
-	getAllowedRoles
+	getAllowedRoles,
+	addMutexRole
 };
 
