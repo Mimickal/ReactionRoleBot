@@ -191,6 +191,25 @@ function addMutexRole(args) {
 		});
 }
 
+/**
+ * Removes the mutually exclusive rule for the two roles in the given guild.
+ * role_id_1 and role_id_2 are interchangable here the same way they are in
+ * addMutexRole.
+ */
+function removeMutexRole(args) {
+	// TODO sanity check values
+	let fields = lodash.pick(args, ['guild_id', 'role_id_1', 'role_id_2']);
+	let flipped = lodash.pick(args, ['guild_id']);
+	flipped.role_id_1 = fields.role_id_2;
+	flipped.role_id_2 = fields.role_id_1;
+
+	// We can just try to delete with roles in both orders.
+	return Promise.all([
+		knex(MUTEX).where(fields).del(),
+		knex(MUTEX).where(flipped).del()
+	]).then(([count1, count2]) => ((count1 || 0) + (count2 || 0)));
+}
+
 module.exports = {
 	DISCORD_ID_LENGTH,
 	META,
@@ -208,6 +227,7 @@ module.exports = {
 	addAllowedRole,
 	removeAllowedRole,
 	getAllowedRoles,
-	addMutexRole
+	addMutexRole,
+	removeMutexRole
 };
 
