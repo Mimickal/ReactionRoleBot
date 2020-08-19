@@ -19,6 +19,7 @@ const knex = require('knex')(knexfile[process.env.NODE_ENV || 'development']);
 const lodash = require('lodash/object');
 
 const META = 'meta';
+const MUTEX = 'mutex';
 const PERMS = 'perms';
 const REACTS = 'reacts';
 const DISCORD_ID_LENGTH = {
@@ -167,6 +168,7 @@ function getAllowedRoles(guild_id) {
 module.exports = {
 	DISCORD_ID_LENGTH,
 	META,
+	MUTEX,
 	PERMS,
 	REACTS,
 	addRoleReact,
