@@ -677,10 +677,19 @@ function onReactionAdd(reaction, user) {
 				return;
 			}
 
-			return reaction.message.guild.members.fetch(user.id)
-				.then(member => member.roles.add(roleId, 'Role bot assignment'))
-				.then(() => database.incrementAssignCounter())
-				.then(() => console.log(`added role ${roleId} to ${user}`));
+			return Promise.all([
+				reaction.message.guild.members.fetch(user.id),
+				database.getMutexRoles({
+					guild_id: reaction.message.guild.id,
+					role_id:  roleId
+				})
+			])
+			.then(([member, mutexRoles]) =>
+				member.roles.remove(mutexRoles, 'Role bot removal (mutex)')
+				.then(() => member.roles.add(roleId, 'Role bot assignment'))
+			)
+			.then(() => database.incrementAssignCounter())
+			.then(() => console.log(`added role ${roleId} to ${user}`));
 		})
 		.catch(logError);
 }

@@ -210,6 +210,32 @@ function removeMutexRole(args) {
 	]).then(([count1, count2]) => ((count1 || 0) + (count2 || 0)));
 }
 
+/**
+ * Returns the list of roles that are mutually exclusive with the given role,
+ * for the given guild. If no roles are mutually exclusive, an empty array is
+ * returned.
+ */
+function getMutexRoles(args) {
+	// TODO sanity check values
+	let fields = lodash.pick(args, ['guild_id', 'role_id'])
+
+	// Roles could be added in either order, so fetch with both orders and
+	// combine the results.
+	return Promise.all([
+		knex(MUTEX).select('role_id_1').where({
+			guild_id:  fields.guild_id,
+			role_id_2: fields.role_id
+		}),
+		knex(MUTEX).select('role_id_2').where({
+			guild_id:  fields.guild_id,
+			role_id_1: fields.role_id
+		})
+	]).then(([res1, res2]) => [
+		...res1.map(row => row.role_id_1),
+		...res2.map(row => row.role_id_2)
+	]);
+}
+
 module.exports = {
 	DISCORD_ID_LENGTH,
 	META,
@@ -228,6 +254,7 @@ module.exports = {
 	removeAllowedRole,
 	getAllowedRoles,
 	addMutexRole,
-	removeMutexRole
+	removeMutexRole,
+	getMutexRoles
 };
 
