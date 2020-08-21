@@ -444,7 +444,7 @@ function addPermissionRole(msg, parts) {
 	msg.guild.roles.fetch(roleId)
 		.then(role => {
 			if (!role) {
-				throw new Error('Invalid role');
+				throw new Error('Invalid Role');
 			}
 
 			return database.addAllowedRole({
@@ -488,7 +488,7 @@ function removePermissionRole(msg, parts) {
 	msg.guild.roles.fetch(roleId)
 		.then(role => {
 			if (!role) {
-				throw new Error('Invalid role');
+				throw new Error('Invalid Role');
 			}
 
 			return database.removeAllowedRole({
