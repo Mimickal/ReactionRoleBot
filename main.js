@@ -662,7 +662,9 @@ function sayHelp(msg) {
  * Event handler for when a reaction is added to a message.
  * Checks if the message has any reaction roles configured, assigning a role to
  * the user who added the reaction, if applicable. Ignores reacts added by this
- * bot, of course.
+ * bot, of course. If a user attempts to assign a role that is mutually
+ * exclusive with a role they already have, they will lose that first role, and
+ * their reaction to the message for that role will be removed.
  */
 function onReactionAdd(reaction, user) {
 	if (user === client.user) {
@@ -677,6 +679,10 @@ function onReactionAdd(reaction, user) {
 				return;
 			}
 
+			// TODO if ever there was a time for async-await, this is it.
+			// TODO Also this seems to hit Discord's rate limit almost
+			// immediately because of each mutex react removal being its own
+			// request. Might need to look into .set
 			return Promise.all([
 				reaction.message.guild.members.fetch(user.id),
 				database.getMutexRoles({
@@ -687,6 +693,13 @@ function onReactionAdd(reaction, user) {
 			.then(([member, mutexRoles]) =>
 				member.roles.remove(mutexRoles, 'Role bot removal (mutex)')
 				.then(() => member.roles.add(roleId, 'Role bot assignment'))
+				.then(() => database.getMutexEmojis(mutexRoles))
+				.then(mutexEmojis =>
+					asyncForEach(mutexEmojis, function(emoji) {
+						let mesRec = reaction.message.reactions.resolve(emoji);
+						if (mesRec) return mesRec.users.remove(user);
+					})
+				)
 			)
 			.then(() => database.incrementAssignCounter())
 			.then(() => console.log(`added role ${roleId} to ${user}`));
@@ -739,6 +752,18 @@ function userHasPermission(msg, command_name) {
 
 	return database.getAllowedRoles(msg.guild.id)
 		.then(roles => roles.some(role => msg.member.roles.cache.has(role)));
+}
+
+/**
+ * Takes an array of items and a function that may return a promise, then runs
+ * the promise function for each item in the array, in sequence. Returns a
+ * promise that resolves once every element has been processed.
+ * Does not return the results because we don't need them.
+ */
+async function asyncForEach(arr, promiseFunc) {
+	for await (let elem of arr) {
+		promiseFunc(elem);
+	}
 }
 
 // I'm aware Discord.MessageMentions.*_PATTERN constants exist, but they all

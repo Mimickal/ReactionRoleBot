@@ -236,6 +236,19 @@ function getMutexRoles(args) {
 	]);
 }
 
+/**
+ * Takes a list of roles and returns the list of emojis associated with them.
+ * This is mostly so we can remove reacts in bulk.
+ * XXX: It might make sense to return this as key-value pairs in the future,
+ * instead of just an array.
+ */
+function getMutexEmojis(roles) {
+	return knex(REACTS)
+		.select('emoji_id')
+		.whereIn('role_id', roles)
+		.then(res => res.map(elem => elem.emoji_id));
+}
+
 module.exports = {
 	DISCORD_ID_LENGTH,
 	META,
@@ -255,6 +268,7 @@ module.exports = {
 	getAllowedRoles,
 	addMutexRole,
 	removeMutexRole,
-	getMutexRoles
+	getMutexRoles,
+	getMutexEmojis
 };
 
