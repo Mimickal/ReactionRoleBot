@@ -124,6 +124,12 @@ code. This command is available to all users.
 @bot info
 ```
 
+## Rate Limits
+If the bot is taking a few moments to respond to reactions, it is likely hitting
+Discord's strict rate limit. This happens most often with mutually exclusive
+roles, since the bot needs to make several requests to make them work. The bot
+is registering the actions. Give it a few seconds to catch up.
+
 ## Hosting your own instance
 This bot is built on [discord.js](https://discord.js.org/#/), so you'll need
 Node.js installed. Discord.js says it requires Node.js version 12.0.0 or higher,
