@@ -80,8 +80,39 @@ removing reacts.
 @bot role-remove-all
 ```
 
-**Printing command usage info** - If you'd rather the bot tell you how to use it,
-instead of looking at this page, you can use this command.
+**Adding roles that can configure the bot** - By default, the bot will only
+listen to users who have the administrator permission. This command allows you
+to add additional roles that are allowed to configure the bot.
+```
+# Command
+@bot perm-add <role|role_id>
+```
+
+**Removing roles that can configure the bot** - Removes a role from being
+allowed to configure the bot. The bot will always listen to users with the
+administrator permissions. This cannot currently be disabled.
+```
+# Command
+@bot perm-remove <role|role_id>
+```
+
+**Add mutually exclusive roles** - Makes two roles mutually exclusive. If a user
+tried to add two roles that are mutually exclusive, the bot will automatically
+remove the first one they had.
+```
+# Command
+@bot mutex-add <role1|role1_id> <role2|role2_id>
+```
+
+**Remove mutually exclusive roles** - Removes the mutually exclusive constraint
+from two roles.
+```
+# Command
+@bot mutex-remove <role1|role1_id> <role2|role2_id>
+```
+
+**Printing command usage info** - If you'd rather the bot tell you how to use
+it, instead of looking at this page, you can use this command.
 ```
 # Command
 @bot help
