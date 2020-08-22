@@ -9,9 +9,9 @@ After=network.target network-online.target
 Type=simple
 Restart=on-failure
 RestartSec=10
-User=donut
+User=<user>
 Environment="NODE_ENV=prod"
-ExecStart=/usr/local/bin/node /srv/discord/ReactionRoleBot/main.js
+ExecStart=/usr/bin/env nodejs /srv/discord/ReactionRoleBot/main.js
 
 [Install]
 WantedBy=multi-user.target

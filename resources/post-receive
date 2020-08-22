@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This should go in the "hooks" folder of your bare deployment repo.
 # NOTE: You need to update this manually!
 
@@ -9,10 +9,10 @@ NODE_ENV="prod"
 
 # Download all the dependencies and stuff
 mkdir -p $TEMP
-git --work-tree=$TEMP --git-dir=$REPO checkout -f
+/usr/bin/env git --work-tree=$TEMP --git-dir=$REPO checkout -f
 cd $TEMP
-npm install
-NODE_ENV=$NODE_ENV npm run knex migrate:latest
+/usr/bin/env npm install
+NODE_ENV=$NODE_ENV /usr/bin/env npm run knex migrate:latest
 
 # Now install the code
 cd /
@@ -20,4 +20,4 @@ rm -rf $TARGET
 mv $TEMP $TARGET
 
 # Restart the app
-systemctl restart reactionrolebot.service
+/usr/bin/env systemctl restart reactionrolebot.service
