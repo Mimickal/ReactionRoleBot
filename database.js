@@ -125,12 +125,12 @@ function incrementAssignCounter(num) {
  */
 function getMetaStats() {
 	return Promise.all([
-		knex(REACTS).distinct('guild_id').count().first(),
+		knex(REACTS).countDistinct('guild_id as count').first(),
 		knex(REACTS).count().first(),
 		knex(META).select('assignments').first()
 	]).then(([res1, res2, res3]) => {
 		return {
-			guilds: res1['count(*)'],
+			guilds: res1['count'],
 			roles: res2['count(*)'],
 			assignments: res3.assignments
 		};
