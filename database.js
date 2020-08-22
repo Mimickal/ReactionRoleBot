@@ -105,7 +105,9 @@ function getRoleReactMap(message_id) {
  * Deletes all the data stored for the given guild.
  */
 function clearGuildInfo(guild_id) {
-	return knex(REACTS).where('guild_id', guild_id).del();
+	return Promise.all([REACTS, PERMS, MUTEX].map(table =>
+		knex(table).where('guild_id', guild_id).del()
+	));
 }
 
 /**
