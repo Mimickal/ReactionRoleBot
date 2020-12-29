@@ -134,12 +134,46 @@ roles, since the bot needs to make several requests to make them work. The bot
 is registering the actions. Give it a few seconds to catch up.
 
 ## Hosting your own instance
-This bot is built on [discord.js](https://discord.js.org/#/), so you'll need
-Node.js installed. Discord.js says it requires Node.js version 12.0.0 or higher,
-but I've been testing with version 10.19.0 with no issues.
+This bot is built on [discord.js](https://discord.js.org/#/) v12, so you'll need
+Node.js 12.0.0 (or newer) installed. You will also need your own Discord bot
+account.
 
 The `resources` directory has a service file that can be used with Linux distros
 with systemd. If you're installing this on some other operating system, you're
 on your own.
 
-_I will add more detailed setup instructions later._
+### Running as a service
+The provided service file expects to find the bot code at
+`/srv/discord/ReactionRoleBot/`, and will want to create the sqlite database at
+`/srv/discord/rolebot.sqlite`. The easiest way to do this is to create a
+`/srv/discord` directory, and `chown` it so it belongs to the user running the
+bot.
+
+The following will prepare the bot to run. Run this from `/srv/discord`:
+```
+git clone https://github.com/Mimickal/ReactionRoleBot.git
+cd ReactionRoleBot
+npm install
+NODE_ENV=prod npm run knex migrate:latest
+```
+
+Create a file `/etc/discord/ReactionRoleBot/token` and paste your bot token in,
+in plain text.
+
+Install `reactionrolebot.service` into `/etc/systemd/system/`.
+
+Now you should be able to run `systemctl restart reactionrolebot.service` to
+start your bot.
+
+### Running locally (in dev-mode)
+Run this wherever you want:
+```
+git clone https://github.com/Mimickal/ReactionRoleBot.git
+cd ReactionRoleBot
+npm install
+npm run knex migrate:latest
+```
+
+Create a file containing your bot token in plain text.
+
+Run this to start the bot: `node main.js path/to/your/token`
