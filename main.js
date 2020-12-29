@@ -123,13 +123,13 @@ function onReady() {
  * Event handler for when the bot joins a new guild.
  */
 function onGuildJoin(guild) {
+	let info = unindent(`Hi there! My role needs to be ordered above any
+		role you would like me to assign. You're getting this message
+		because you are the server owner, but anybody with Administrator
+		permissions or an allowed role can configure me.`);
+
 	guild.members.fetch(client.user.id)
 		.then(clientMember => {
-			let info = unindent(`Hi there! My role needs to be ordered above any
-				role you would like me to assign. You're getting this message
-				because you are the server owner, but anybody with Administrator
-				permissions or an allowed role can configure me.`);
-
 			const Perms = Discord.Permissions.FLAGS;
 			const requiredPermMap = {
 				[Perms.ADD_REACTIONS]: 'Add Reactions',
@@ -157,9 +157,10 @@ function onGuildJoin(guild) {
 					'\n' + missingPermNames.join('\n');
 			}
 
-			return guild.owner.createDM()
-				.then(dmChannel => dmChannel.send(info));
+			return guild.members.fetch(guild.ownerID);
 		})
+		.then(owner => owner.createDM())
+		.then(dmChannel => dmChannel.send(info))
 		.catch(logError);
 }
 
