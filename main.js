@@ -21,6 +21,8 @@ const Discord = require('discord.js');
 const cache = require('./cache');
 const database = require('./database');
 
+const info = require('./package.json');
+
 // Everything operates on IDs, so we can safely rely on partials.
 // This causes reaction events to fire for uncached messages.
 const client = new Discord.Client({
@@ -111,7 +113,7 @@ function onReady() {
 	const LISTENING = 2;
 	client.user.setPresence({
 		activity: {
-			name: "'help' for commands",
+			name: `'help' for commands. Running version ${info.version}`,
 			type: Discord.Constants.ActivityTypes[LISTENING]
 		}
 	}).catch(logError);
@@ -631,7 +633,6 @@ function removeMutexRoles(msg, parts) {
  * compliant with the AGPLv3 this bot is licensed under.
  */
 function sayInfo(msg) {
-	const info = require('./package.json');
 	database.getMetaStats().then(stats => msg.reply(
 		`${info.description}\n` +
 		`**Running version:** ${info.version}\n` +
