@@ -70,13 +70,12 @@ cmdDef(removePermissionRole,
 	re-adds their permission.`
 );
 cmdDef(addMutexRoles,
-	'mutex-add', '<role1|role1_id> <role2|role2_id>',
-	`Makes two roles mutually exclusive. If a user attempts to add two mutually
-	exclusive roles, they will lose the first one they had.`
+	'mutex-add', '<message_id> <role1|role1_id> <role2|role2_id> <role...|role..._id>',
+	`Makes roles mutually exclusive on the given message.`
 );
 cmdDef(removeMutexRoles,
-	'mutex-remove', '<role1|role1_id> <role2|role2_id>',
-	`Removes the mutually exclusive restriction on two roles.`
+	'mutex-remove', '<message_id> <role1|role1_id> <role2|role2_id> <role...|role..._id>',
+	`Removes the mutually exclusive restriction for roles on the given message.`
 );
 cmdDef(sayInfo,
 	'info', '',
