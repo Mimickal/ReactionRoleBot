@@ -19,10 +19,10 @@ const db = require('../database');
 exports.up = function(knex) {
 	return knex.schema.createTable(db.MUTEX, table => {
 		table.string('guild_id',  db.DISCORD_ID_LENGTH.MAX);
-		table.string('role_id_1', db.DISCORD_ID_LENGTH.MAX);
-		table.string('role_id_2', db.DISCORD_ID_LENGTH.MAX);
+		table.string('message_id', db.DISCORD_ID_LENGTH.MAX);
+		table.string('role_id', db.DISCORD_ID_LENGTH.MAX);
 
-		table.primary(['guild_id', 'role_id_1', 'role_id_2']);
+		table.primary(['guild_id', 'message_id', 'role_id']);
 	});
 };
 

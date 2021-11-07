@@ -168,73 +168,42 @@ function getAllowedRoles(guild_id) {
 }
 
 /**
- * Creates a mutually exclusive rule for two roles in the given guild.
- * role_id_1 and role_id_2 are interchangable, so if there's already a record
- * for roleA and roleB, attempting to add a record for roleB and roleA will
- * throw a unique constraint violation exception.
+ * Creates a mutually exclusive rule for a role on the given guild and message.
  */
 function addMutexRole(args) {
 	// TODO sanity check values
-	let fields = lodash.pick(args, ['guild_id', 'role_id_1', 'role_id_2']);
+	let fields = lodash.pick(args, ['guild_id', 'message_id', 'role_id']);
 
-	// Need to try role 1 and role 2 in reverse order too
-	let flipped = lodash.pick(args, ['guild_id']);
-	flipped.role_id_1 = fields.role_id_2;
-	flipped.role_id_2 = fields.role_id_1;
-
-	return knex(MUTEX)
-		.first()
-		.where(fields)
-		.then(record => {
-			// If record exists, insert it again to cause a unique constraint
-			// exception. If not, try to insert the fields in reverse order.
-			let version = record ? fields : flipped;
-			return knex(MUTEX).insert(version);
-		});
+	return knex(MUTEX).insert(fields);
 }
 
 /**
- * Removes the mutually exclusive rule for the two roles in the given guild.
- * role_id_1 and role_id_2 are interchangable here the same way they are in
- * addMutexRole.
+ * Removes a mutex rule for a role on the given guild and message.
  */
 function removeMutexRole(args) {
 	// TODO sanity check values
-	let fields = lodash.pick(args, ['guild_id', 'role_id_1', 'role_id_2']);
-	let flipped = lodash.pick(args, ['guild_id']);
-	flipped.role_id_1 = fields.role_id_2;
-	flipped.role_id_2 = fields.role_id_1;
+	let fields = lodash.pick(args, ['guild_id', 'message_id', 'role_id']);
 
-	// We can just try to delete with roles in both orders.
-	return Promise.all([
-		knex(MUTEX).where(fields).del(),
-		knex(MUTEX).where(flipped).del()
-	]).then(([count1, count2]) => ((count1 || 0) + (count2 || 0)));
+	return knex(MUTEX).where(fields).del()
 }
 
 /**
- * Returns the list of roles that are mutually exclusive with the given role,
- * for the given guild. If no roles are mutually exclusive, an empty array is
- * returned.
+ * Returns the list of roles that are mutually exclusive for the given guild and message.
+ * If no roles are mutually exclusive, an empty array is returned.
  */
 function getMutexRoles(args) {
 	// TODO sanity check values
-	let fields = lodash.pick(args, ['guild_id', 'role_id'])
+	let fields = lodash.pick(args, ['guild_id', 'message_id'])
 
 	// Roles could be added in either order, so fetch with both orders and
 	// combine the results.
-	return Promise.all([
-		knex(MUTEX).select('role_id_1').where({
-			guild_id:  fields.guild_id,
-			role_id_2: fields.role_id
-		}),
-		knex(MUTEX).select('role_id_2').where({
-			guild_id:  fields.guild_id,
-			role_id_1: fields.role_id
-		})
-	]).then(([res1, res2]) => [
-		...res1.map(row => row.role_id_1),
-		...res2.map(row => row.role_id_2)
+	return knex(MUTEX).select('role_id')
+	.where({
+		guild_id: fields.guild_id,
+		message_id: fields.message_id
+	})
+	.then(result => [
+		...result.map(row => row.role_id),
 	]);
 }
 

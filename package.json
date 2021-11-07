@@ -11,7 +11,7 @@
   },
   "devDependencies": {},
   "scripts": {
-    "knex": "node_modules/knex/bin/cli.js",
+    "knex": "node node_modules/knex/bin/cli.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

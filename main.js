@@ -32,7 +32,7 @@ const client = new Discord.Client({
 		Discord.Constants.PartialTypes.REACTION
 	]
 });
-const token_file = process.argv[2] || '/etc/discord/ReactionRoleBot/token';
+const token_file = process.argv[2] || '/data/role-reaction-bot/token';
 const token = fs.readFileSync(token_file).toString().trim();
 
 // Map of command names to handling functions. Doubles as a validator.
@@ -516,56 +516,56 @@ function removePermissionRole(msg, parts) {
 }
 
 /**
- * Makes two roles mutually exclusive for a guild.
+ * Makes roles mutually exclusive for a guild.
  */
 function addMutexRoles(msg, parts) {
-	let maybeRole1 = parts.shift();
-	let maybeRole2 = parts.shift();
+	const issues = [];
+	const validRoleIdsMap = {};
+	const messageId = parts.shift();
+	const roleNames = parts;
 
-	let roleId1 = extractId(maybeRole1);
-	let roleId2 = extractId(maybeRole2);
+	if (roleNames.length < 2) issues.push('Not enough roles were specified for a mutex.');
 
-	let issue;
-	if (parts.length > 0) issue = 'Too many arguments!';
-	else if (!maybeRole1) issue = 'Missing role 1!';
-	else if (!maybeRole2) issue = 'Missing role 2!';
-	else if (!roleId1)    issue = `Invalid role \`${maybeRole1}\`!`;
-	else if (!roleId2)    issue = `Invalid role \`${maybeRole2}\`!`;
-	else if (roleId1 == roleId2)
-		issue = 'Cannot make a role mutually exclusive with itself!';
+	roleNames.forEach(roleName => {
+		let roleId = extractId(roleName);
+		if (!roleId) 				   issues.push(`Invalid role \`${roleName}\`!`);
+		if (roleId in validRoleIdsMap) issues.push(`Cannot make \`${roleName}\` mutually exclusive with itself!`);
+		validRoleIdsMap[roleId] = true;
+	});
 
-	if (issue) {
-		msg.reply(issue + usage('mutex-add'));
+	if (issues.length > 0) {
+		msg.reply(`Encountered issues while trying to setup mutex:\n${issues.join('\n')}\n` + usage('mutex-add'));
 		return;
 	}
 
-	Promise.all([
-		msg.guild.roles.fetch(roleId1),
-		msg.guild.roles.fetch(roleId2)
-	])
-	.then(([role1, role2]) => {
-		if (!role1) throw new Error('Invalid Role 1');
-		if (!role2) throw new Error('Invalid Role 2');
+	const validRoleIds = Object.keys(validRoleIdsMap);
 
-		return database.addMutexRole({
+	Promise.all(validRoleIds.map(roleId => msg.guild.roles.fetch(roleId)))
+	.then(roles => {
+		const invalidRoles = roles.filter(role => !(role.id in validRoleIdsMap));
+		if (invalidRoles.length > 0) {
+			throw new Error(`The following roles are invalid:\n${invalidRoles.join(`\n`)}`);
+		}
+
+		return Promise.all(roles.map(role => database.addMutexRole({
 			guild_id: msg.guild.id,
-			role_id_1: role1.id,
-			role_id_2: role2.id
-		});
+			message_id: messageId,
+			role_id: role.id
+		})));
 	})
 	.then(() => msg.reply(
-		`Roles <@&${roleId1}> and <@&${roleId2}> are now mutually exclusive`
+		`Roles <@&${validRoleIds.slice(0, -1).join('>, <@&')}> and <@&${validRoleIds.slice(-1)[0]}>` +
+		`are now set as mutually exclusive on message \`${msg.id}\`.`
 	))
 	.catch(err => {
-		let match;
-		if (match = err.message.match(/Invalid Role (\d)/)) {
-			let cantFind = match[1] === '1' ? roleId1 : roleId2;
-			msg.reply(`I can't find a role with ID \`${cantFind}\``);
+		if (err.message.includes('The following roles are invalid')) {
+			msg.reply(err.message);
 		}
 		else if (err.message.includes('UNIQUE constraint failed')) {
 			msg.reply(unindent(
-				`Roles <@&${roleId1}> and <@&${roleId2}> are
-				already mutually exclusive`
+				`A role you specified is already set as mutually exclusive.` +
+				`Here is a list of the current mutually exclusive roles on message \`${msg.id}\`:\n` +
+				`fdsafs` // TODO: Fetch and list roles
 			));
 		}
 		else {
@@ -576,51 +576,52 @@ function addMutexRoles(msg, parts) {
 }
 
 /**
- * Removes the mutually exclusive restriction for two roles in a guild.
+ * Removes the mutually exclusive restriction for roles in a guild.
  */
 function removeMutexRoles(msg, parts) {
-	let maybeRole1 = parts.shift();
-	let maybeRole2 = parts.shift();
+	const issues = [];
+	const validRoleIdsMap = {};
+	const messageId = parts.shift();
+	const roleNames = parts;
 
-	let roleId1 = extractId(maybeRole1);
-	let roleId2 = extractId(maybeRole2);
+	if (roleNames.length === 0) issues.push('A role was not specified to be removed.');
 
-	let issue;
-	if (parts.length > 0) issue = 'Too many arguments!';
-	else if (!maybeRole1) issue = 'Missing role 1!';
-	else if (!maybeRole2) issue = 'Missing role 2!';
-	else if (!roleId1)    issue = `Invalid role \`${maybeRole1}\`!`;
-	else if (!roleId2)    issue = `Invalid role \`${maybeRole2}\`!`;
+	roleNames.forEach(roleName => {
+		let roleId = extractId(roleName);
+		if (!roleId) 				   issues.push(`Invalid role \`${roleName}\`!`);
+		validRoleIdsMap[roleId] = true;
+	});
 
-	if (issue) {
-		msg.reply(issue + usage('mutex-remove'));
+	if (issues.length > 0) {
+		msg.reply(`Encountered issues while trying to remove mutex:\n${issues.join('\n')}\n` + usage('mutex-add'));
 		return;
 	}
 
-	Promise.all([
-		msg.guild.roles.fetch(roleId1),
-		msg.guild.roles.fetch(roleId2)
-	])
-	.then(([role1, role2]) => {
-		if (!role1) throw new Error('Invalid Role 1');
-		if (!role2) throw new Error('Invalid Role 2');
+	const validRoleIds = Object.keys(validRoleIdsMap);
 
-		return database.removeMutexRole({
+	Promise.all(validRoleIds.map(roleId => msg.guild.roles.fetch(roleId)))
+		.then(roles => {
+		const invalidRoles = roles.filter(role => !(role.id in validRoleIdsMap));
+		if (invalidRoles.length > 0) {
+			throw new Error(`The following roles are invalid:\n${invalidRoles.join(`\n`)}`);
+		}
+
+		return Promise.all(roles.map(role => database.removeMutexRole({
 			guild_id: msg.guild.id,
-			role_id_1: role1.id,
-			role_id_2: role2.id
-		});
+			message_id: messageId,
+			role_id: role.id
+		})));
 	})
-	.then(numRemoved => msg.reply(
-		`Roles <@&${roleId1}> and <@&${roleId2}> ${
-			numRemoved === 1 ? 'are no longer' : 'were already not'
-		} mutually exclusive`
-	))
+	.then(() => {
+		const reply = validRoleIds.length > 1
+			? `Roles <@&${validRoleIds.slice(0, -1).join('>, <@&')}> and <@&${validRoleIds.slice(-1)[0]}>` +
+			`are no longer set as mutually exclusive on message \`${msg.id}\`.`
+			: `Role <@&${validRoleIds[0]}> is no longer set as mutually exclusive on message \`${msg.id}\`.`
+		msg.reply(reply);
+	})
 	.catch(err => {
-		let match;
-		if (match = err.message.match(/Invalid Role (\d)/)) {
-			let cantFind = match[1] === '1' ? roleId1 : roleId2;
-			msg.reply(`I can't find a role with ID \`${cantFind}\``);
+		if (err.message.includes('The following roles are invalid')) {
+			msg.reply(err.message);
 		}
 		else {
 			msg.reply(`I got an error I don't recognize:\n\`${err.message}\``);
@@ -689,20 +690,21 @@ function onReactionAdd(reaction, user) {
 				reaction.message.guild.members.fetch(user.id),
 				database.getMutexRoles({
 					guild_id: reaction.message.guild.id,
-					role_id:  roleId
+					message_id: reaction.message.id,
 				})
 			])
-			.then(([member, mutexRoles]) =>
-				member.roles.remove(mutexRoles, 'Role bot removal (mutex)')
-				.then(() => member.roles.add(roleId, 'Role bot assignment'))
-				.then(() => database.getMutexEmojis(mutexRoles))
-				.then(mutexEmojis =>
-					asyncForEach(mutexEmojis, function(emoji) {
-						let mesRec = reaction.message.reactions.resolve(emoji);
-						if (mesRec) return mesRec.users.remove(user);
-					})
-				)
-			)
+			.then(([member, mutexRoleIds]) => {
+				const filteredMutexRoleIds = mutexRoleIds.filter(mutexRoleId => mutexRoleId !== roleId);
+				member.roles.remove(mutexRoleIds, 'Role bot removal (mutex)')
+					.then(() => member.roles.add(roleId, 'Role bot assignment'))
+					.then(() => database.getMutexEmojis(filteredMutexRoleIds))
+					.then(mutexEmojis =>
+						asyncForEach(mutexEmojis, function (emoji) {
+							let mesRec = reaction.message.reactions.resolve(emoji);
+							if (mesRec) return mesRec.users.remove(user);
+						})
+					)
+			})
 			.then(() => database.incrementAssignCounter())
 			.then(() => console.log(`added role ${roleId} to ${user}`));
 		})
