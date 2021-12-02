@@ -749,7 +749,7 @@ function onReactionRemove(reaction, user) {
 function userHasPermission(msg, command_name) {
 	const everyoneCommands = ['info'];
 	if (
-		msg.member.hasPermission(Discord.Permissions.FLAGS.ADMINISTRATOR) ||
+		msg.member.permissions.has(Discord.Permissions.FLAGS.ADMINISTRATOR) ||
 		everyoneCommands.includes(command_name)
 	) {
 		return Promise.resolve(true);
