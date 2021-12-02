@@ -26,11 +26,24 @@ const info = require('./package.json');
 // Everything operates on IDs, so we can safely rely on partials.
 // This causes reaction events to fire for uncached messages.
 const client = new Discord.Client({
+	intents: [
+		Discord.Intents.FLAGS.GUILDS,
+		Discord.Intents.FLAGS.GUILD_MEMBERS,
+		Discord.Intents.FLAGS.GUILD_EMOJIS_AND_STICKERS,
+		Discord.Intents.FLAGS.GUILD_MESSAGES,
+		Discord.Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+	],
 	partials: [
 		Discord.Constants.PartialTypes.MESSAGE,
 		Discord.Constants.PartialTypes.CHANNEL,
 		Discord.Constants.PartialTypes.REACTION
-	]
+	],
+	presence: {
+		activities: [{
+			name: `'help' for commands. Running version ${info.version}`,
+			type: Discord.Constants.ActivityTypes.LISTENING,
+		}],
+	},
 });
 const token_file = process.argv[2] || '/etc/discord/ReactionRoleBot/token';
 const token = fs.readFileSync(token_file).toString().trim();
@@ -107,16 +120,6 @@ client.login(token).catch(err => {
  */
 function onReady() {
 	console.log(`Logged in as ${client.user.tag}`);
-
-	// No idea why Discord.js does stuff like this...
-	// https://github.com/discordjs/discord.js/blob/master/src/util/Constants.js#L431
-	const LISTENING = 2;
-	client.user.setPresence({
-		activity: {
-			name: `'help' for commands. Running version ${info.version}`,
-			type: Discord.Constants.ActivityTypes[LISTENING]
-		}
-	}).catch(logError);
 }
 
 /**
