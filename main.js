@@ -782,7 +782,7 @@ function extractId(str) {
 		return null;
 	}
 
-	let match = str.match(/(\d{17,19})/);
+	let match = str.match(/(\d{17,22})/);
 	return match ? match[1] : null;
 }
 
@@ -797,7 +797,7 @@ function extractEmoji(emoji) {
 		return null;
 	}
 
-	let match = emoji.match(/<:.+:(\d{17,19})>/);
+	let match = emoji.match(/<:.+:(\d{17,22})>/);
 	return match ? match[1] : emoji;
 }
 
