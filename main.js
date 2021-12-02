@@ -660,7 +660,7 @@ function sayHelp(msg) {
 		def.get('usage'), def.get('description')
 	));
 
-	msg.reply(embed).catch(logError);
+	msg.reply({ embeds: [embed] }).catch(logError);
 }
 
 /**
