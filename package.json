@@ -7,9 +7,8 @@
     "discord.js": "^12.5.1",
     "knex": "^0.20.13",
     "lodash": "^4.17.20",
-    "sqlite3": "^4.1.1"
+    "sqlite3": "^4.2.0"
   },
-  "devDependencies": {},
   "scripts": {
     "knex": "node_modules/knex/bin/cli.js",
     "test": "echo \"Error: no test specified\" && exit 1"
