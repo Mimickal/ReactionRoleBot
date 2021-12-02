@@ -134,9 +134,13 @@ roles, since the bot needs to make several requests to make them work. The bot
 is registering the actions. Give it a few seconds to catch up.
 
 ## Hosting your own instance
-This bot is built on [discord.js](https://discord.js.org/#/) v12, so you'll need
-Node.js 12.0.0 (or newer) installed. You will also need your own Discord bot
+This bot is built on [discord.js](https://discord.js.org/#/) v13, so you'll need
+Node.js 16.6.0 (or newer) installed. You will also need your own Discord bot
 account.
+
+If you're upgrading from an older Discord.js v12 version of the bot, the Node.js
+16.6.0 requirement might be problematic. you might consider using something like
+https://github.com/nvm-sh/nvm to make the transition easier.
 
 The `resources` directory has a service file that can be used with Linux distros
 with systemd. If you're installing this on some other operating system, you're
