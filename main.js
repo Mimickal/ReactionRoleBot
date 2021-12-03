@@ -26,11 +26,24 @@ const info = require('./package.json');
 // Everything operates on IDs, so we can safely rely on partials.
 // This causes reaction events to fire for uncached messages.
 const client = new Discord.Client({
+	intents: [
+		Discord.Intents.FLAGS.GUILDS,
+		Discord.Intents.FLAGS.GUILD_MEMBERS,
+		Discord.Intents.FLAGS.GUILD_EMOJIS_AND_STICKERS,
+		Discord.Intents.FLAGS.GUILD_MESSAGES,
+		Discord.Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+	],
 	partials: [
 		Discord.Constants.PartialTypes.MESSAGE,
 		Discord.Constants.PartialTypes.CHANNEL,
 		Discord.Constants.PartialTypes.REACTION
-	]
+	],
+	presence: {
+		activities: [{
+			name: `'help' for commands. Running version ${info.version}`,
+			type: Discord.Constants.ActivityTypes.LISTENING,
+		}],
+	},
 });
 const token_file = process.argv[2] || '/etc/discord/ReactionRoleBot/token';
 const token = fs.readFileSync(token_file).toString().trim();
@@ -107,16 +120,6 @@ client.login(token).catch(err => {
  */
 function onReady() {
 	console.log(`Logged in as ${client.user.tag}`);
-
-	// No idea why Discord.js does stuff like this...
-	// https://github.com/discordjs/discord.js/blob/master/src/util/Constants.js#L431
-	const LISTENING = 2;
-	client.user.setPresence({
-		activity: {
-			name: `'help' for commands. Running version ${info.version}`,
-			type: Discord.Constants.ActivityTypes[LISTENING]
-		}
-	}).catch(logError);
 }
 
 /**
@@ -657,7 +660,7 @@ function sayHelp(msg) {
 		def.get('usage'), def.get('description')
 	));
 
-	msg.reply(embed).catch(logError);
+	msg.reply({ embeds: [embed] }).catch(logError);
 }
 
 /**
@@ -746,7 +749,7 @@ function onReactionRemove(reaction, user) {
 function userHasPermission(msg, command_name) {
 	const everyoneCommands = ['info'];
 	if (
-		msg.member.hasPermission(Discord.Permissions.FLAGS.ADMINISTRATOR) ||
+		msg.member.permissions.has(Discord.Permissions.FLAGS.ADMINISTRATOR) ||
 		everyoneCommands.includes(command_name)
 	) {
 		return Promise.resolve(true);
@@ -779,7 +782,7 @@ function extractId(str) {
 		return null;
 	}
 
-	let match = str.match(/(\d{17,19})/);
+	let match = str.match(/(\d{17,22})/);
 	return match ? match[1] : null;
 }
 
@@ -794,7 +797,7 @@ function extractEmoji(emoji) {
 		return null;
 	}
 
-	let match = emoji.match(/<:.+:(\d{17,19})>/);
+	let match = emoji.match(/<:.+:(\d{17,22})>/);
 	return match ? match[1] : emoji;
 }
 
