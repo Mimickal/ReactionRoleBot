@@ -10,6 +10,7 @@
     "sqlite3": "^4.2.0"
   },
   "scripts": {
+    "dev": "node main.js dev-token",
     "knex": "node_modules/knex/bin/cli.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
