@@ -20,6 +20,7 @@ const Discord = require('discord.js');
 
 const cache = require('./cache');
 const database = require('./database');
+const logger = require('./logger');
 
 const info = require('./package.json');
 
@@ -119,7 +120,7 @@ client.login(token).catch(err => {
  * Event handler for when the bot is logged in.
  */
 function onReady() {
-	console.log(`Logged in as ${client.user.tag}`);
+	logger.info(`Logged in as ${client.user.tag}`);
 }
 
 /**
@@ -707,7 +708,7 @@ function onReactionAdd(reaction, user) {
 				)
 			)
 			.then(() => database.incrementAssignCounter())
-			.then(() => console.log(`added role ${roleId} to ${user}`));
+			.then(() => logger.info(`added role ${roleId} to ${user}`));
 		})
 		.catch(logError);
 }
@@ -737,7 +738,7 @@ function onReactionRemove(reaction, user) {
 
 			return reaction.message.guild.members.fetch(user.id)
 				.then(member => member.roles.remove(roleId, 'Role bot removal'))
-				.then(() => console.log(`removed role ${roleId} from ${user}`))
+				.then(() => logger.info(`removed role ${roleId} from ${user}`))
 		})
 		.catch(logError);
 }
@@ -842,6 +843,6 @@ function unindent(str) {
  * Maybe some day we'll do something more intelligent with errors.
  */
 function logError(err) {
-	console.error(err);
+	logger.error(err);
 }
 
