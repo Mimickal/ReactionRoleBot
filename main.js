@@ -19,9 +19,13 @@ const fs = require('fs');
 const Discord = require('discord.js');
 
 const cache = require('./cache');
+const commands = require('./commands');
 const database = require('./database');
 const logger = require('./logger');
 
+const config = JSON.parse(fs.readFileSync(
+	process.argv[2] || '/etc/discord/ReactionRoleBot/config.json'
+));
 const info = require('./package.json');
 
 // Everything operates on IDs, so we can safely rely on partials.
@@ -46,8 +50,6 @@ const client = new Discord.Client({
 		}],
 	},
 });
-const token_file = process.argv[2] || '/etc/discord/ReactionRoleBot/token';
-const token = fs.readFileSync(token_file).toString().trim();
 
 // Map of command names to handling functions. Doubles as a validator.
 const COMMANDS = new Map();
@@ -106,12 +108,13 @@ const Events = Discord.Constants.Events;
 client.on(Events.CLIENT_READY, onReady);
 client.on(Events.GUILD_CREATE, onGuildJoin);
 client.on(Events.GUILD_DELETE, onGuildLeave);
+client.on(Events.INTERACTION_CREATE, onInteraction);
 client.on(Events.MESSAGE_CREATE, onMessage);
 client.on(Events.MESSAGE_REACTION_ADD, onReactionAdd);
 client.on(Events.MESSAGE_REACTION_REMOVE, onReactionRemove);
 
 
-client.login(token).catch(err => {
+client.login(config.token).catch(err => {
 	logError(err);
 	process.exit(1);
 });
@@ -174,6 +177,13 @@ function onGuildJoin(guild) {
 function onGuildLeave(guild) {
 	database.clearGuildInfo(guild.id)
 		.catch(logError);
+}
+
+/**
+ * Event handler for getting a new slash commands.
+ */
+function onInteraction(interaction) {
+	commands.execute(interaction);
 }
 
 /**

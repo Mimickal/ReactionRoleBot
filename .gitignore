@@ -3,4 +3,4 @@ todo.txt
 *.log
 *.swp
 dev.sqlite3
-dev-token
+dev-config.json

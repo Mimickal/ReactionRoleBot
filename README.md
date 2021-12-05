@@ -161,8 +161,14 @@ npm install
 NODE_ENV=prod npm run knex migrate:latest
 ```
 
-Create a file `/etc/discord/ReactionRoleBot/token` and paste your bot token in,
-in plain text.
+Create a file `/etc/discord/ReactionRoleBot/config.json` and paste in the
+following (obviously fill in the blanks with your bot's info):
+```json
+{
+  "token": "<your token here>",
+  "app_id": "<your bot application ID here>"
+}
+```
 
 Install `reactionrolebot.service` into `/etc/systemd/system/`.
 
@@ -180,4 +186,4 @@ npm run knex migrate:latest
 
 Create a file containing your bot token in plain text.
 
-Run this to start the bot: `node main.js path/to/your/token`
+Run this to start the bot: `node main.js path/to/your/config`
