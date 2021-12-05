@@ -7,9 +7,11 @@
     "discord.js": "^13.3.1",
     "knex": "^0.20.13",
     "lodash": "^4.17.20",
-    "sqlite3": "^4.2.0"
+    "sqlite3": "^4.2.0",
+    "winston": "^3.3.3"
   },
   "scripts": {
+    "dev": "node main.js dev-token",
     "knex": "node_modules/knex/bin/cli.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
