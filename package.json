@@ -11,7 +11,7 @@
     "winston": "^3.3.3"
   },
   "scripts": {
-    "dev": "node main.js dev-token",
+    "dev": "node main.js dev-config.json",
     "knex": "node_modules/knex/bin/cli.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -22,6 +22,9 @@ const cache = require('./cache');
 const database = require('./database');
 const logger = require('./logger');
 
+const config = JSON.parse(fs.readFileSync(
+	process.argv[2] || '/etc/discord/ReactionRoleBot/config.json'
+));
 const info = require('./package.json');
 
 // Everything operates on IDs, so we can safely rely on partials.
@@ -46,8 +49,6 @@ const client = new Discord.Client({
 		}],
 	},
 });
-const token_file = process.argv[2] || '/etc/discord/ReactionRoleBot/token';
-const token = fs.readFileSync(token_file).toString().trim();
 
 // Map of command names to handling functions. Doubles as a validator.
 const COMMANDS = new Map();
@@ -111,7 +112,7 @@ client.on(Events.MESSAGE_REACTION_ADD, onReactionAdd);
 client.on(Events.MESSAGE_REACTION_REMOVE, onReactionRemove);
 
 
-client.login(token).catch(err => {
+client.login(config.token).catch(err => {
 	logError(err);
 	process.exit(1);
 });
