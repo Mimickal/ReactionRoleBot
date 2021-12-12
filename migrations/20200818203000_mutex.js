@@ -14,19 +14,20 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  ******************************************************************************/
-const db = require('../database');
+const DISCORD_ID_MAX = 19;
+const MUTEX = 'mutex';
 
 exports.up = function(knex) {
-	return knex.schema.createTable(db.MUTEX, table => {
-		table.string('guild_id',  db.DISCORD_ID_LENGTH.MAX);
-		table.string('role_id_1', db.DISCORD_ID_LENGTH.MAX);
-		table.string('role_id_2', db.DISCORD_ID_LENGTH.MAX);
+	return knex.schema.createTable(MUTEX, table => {
+		table.string('guild_id',  DISCORD_ID_MAX);
+		table.string('role_id_1', DISCORD_ID_MAX);
+		table.string('role_id_2', DISCORD_ID_MAX);
 
 		table.primary(['guild_id', 'role_id_1', 'role_id_2']);
 	});
 };
 
 exports.down = function(knex) {
-	return knex.schema.dropTable(db.MUTEX);
+	return knex.schema.dropTable(MUTEX);
 };
 

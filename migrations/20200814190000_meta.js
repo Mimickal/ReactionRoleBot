@@ -14,18 +14,18 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  ******************************************************************************/
-const db = require('../database');
+const META = 'meta';
 
 exports.up = function(knex) {
-	return knex.schema.createTable(db.META, table => {
+	return knex.schema.createTable(META, table => {
 		table.integer('assignments');
 	}).then(() => {
 		// There will only ever be one row in this table so we make it here.
-		return knex(db.META).insert({ assignments: 0 });
+		return knex(META).insert({ assignments: 0 });
 	});
 };
 
 exports.down = function(knex) {
-	return knex.schema.dropTable(db.META);
+	return knex.schema.dropTable(META);
 };
 
