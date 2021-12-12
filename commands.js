@@ -14,10 +14,16 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  ******************************************************************************/
-const { SlashCommandRegistry } = require('discord-command-registry');
+const {
+	ApplicationCommandType,
+	SlashCommandRegistry,
+} = require('discord-command-registry');
+const SELECTED_MESSAGE_CACHE = require('memory-cache');
 
 const database = require('./database');
 const info = require('./package.json');
+
+const ONE_HOUR_IN_MS = 60*60*1000;
 
 const REGISTRY = new SlashCommandRegistry()
 	.addCommand(command => command
@@ -26,6 +32,16 @@ const REGISTRY = new SlashCommandRegistry()
 			'Prints description, version, and link to source code for the bot'
 		)
 		.setHandler(cmdInfo)
+	)
+	.addContextMenuCommand(command => command
+		.setName('select-message')
+		.setType(ApplicationCommandType.Message)
+		.setHandler(cmdSelect)
+	)
+	.addCommand(command => command
+		.setName('selected')
+		.setDescription('Shows currently selected message')
+		.setHandler(cmdSelected)
 	)
 ;
 
@@ -45,6 +61,36 @@ async function cmdInfo(interaction) {
 		`  - Total role assignments:   ${stats.assignments}\n` +
 		'```'
 	);
+}
+
+/**
+ * Saves a user's selected message for subsequent actions.
+ */
+async function cmdSelect(interaction) {
+	const user    = interaction.user;
+	const message = interaction.options.getMessage('message', true);
+
+	// Always clear selected message first, just to be safe and consistent.
+	SELECTED_MESSAGE_CACHE.del(user.id);
+	SELECTED_MESSAGE_CACHE.put(user.id, message, ONE_HOUR_IN_MS);
+
+	return interaction.reply({
+		content: `Selected message: ${message.url}`,
+		ephemeral: true,
+	});
+}
+
+/**
+ * Shows a user their currently selected message.
+ */
+async function cmdSelected(interaction) {
+	const message = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
+	return interaction.reply({
+		content: message
+			? `Currently selected: ${message.url}`
+			: 'No message currently selected',
+		ephemeral: true,
+	});
 }
 
 module.exports = REGISTRY;
