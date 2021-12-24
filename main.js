@@ -808,7 +808,7 @@ function extractEmoji(emoji) {
 		return null;
 	}
 
-	let match = emoji.match(/<:.+:(\d{17,22})>/);
+	let match = emoji.match(/<a?:.+:(\d{17,21})>/);
 	return match ? match[1] : emoji;
 }
 
