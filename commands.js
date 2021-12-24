@@ -16,12 +16,15 @@
  ******************************************************************************/
 const {
 	ApplicationCommandType,
+	Options,
 	SlashCommandRegistry,
 } = require('discord-command-registry');
 const SELECTED_MESSAGE_CACHE = require('memory-cache');
 
 const database = require('./database');
 const info = require('./package.json');
+const logger = require('./logger');
+const { emojiToKey } = require('./util');
 
 const ONE_HOUR_IN_MS = 60*60*1000;
 
@@ -42,6 +45,25 @@ const REGISTRY = new SlashCommandRegistry()
 		.setName('selected')
 		.setDescription('Shows currently selected message')
 		.setHandler(cmdSelected)
+	)
+	.addCommand(command => command
+		.setName('role')
+		.setDescription('Manage react roles')
+		.addSubcommand(subcommand => subcommand
+			.setName('add')
+			.setDescription('Add a new react-role to the selected message')
+			.setHandler(cmdRoleAdd)
+			.addStringOption(option => option
+				.setName('emoji')
+				.setDescription('The emoji to map the role to')
+				.setRequired(true)
+			)
+			.addRoleOption(option => option
+				.setName('role')
+				.setDescription('The role to map the emoji to')
+				.setRequired(true)
+			)
+		)
 	)
 ;
 
@@ -89,6 +111,82 @@ async function cmdSelected(interaction) {
 		content: message
 			? `Currently selected: ${message.url}`
 			: 'No message currently selected',
+		ephemeral: true,
+	});
+}
+
+/**
+ * Map an emoji reaction with a role on the currently selected message.
+ */
+async function cmdRoleAdd(interaction) {
+	const emoji   = Options.getEmoji(interaction, 'emoji', true);
+	const role    = interaction.options.getRole('role', true);
+	let   message = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
+
+	if (!message) {
+		return interaction.reply({
+			content: 'No message selected! Select a message first.',
+			ephemeral: true,
+		});
+	}
+
+	if (!emoji) {
+		return interaction.reply({
+			content: 'Not a valid emoji!',
+			ephemeral: true,
+		});
+	}
+
+	message = await message.fetch();
+
+	// Prevent someone from modifying a server from outside the server.
+	if (interaction.guild !== message.guild || interaction.guild !== role.guild) {
+		// TODO use unindent
+		return interaction.reply({
+			content:
+				'Message and Role need to be in the same Server ' +
+				'this command was issued from',
+			ephemeral: true,
+		});
+	}
+
+	// Try to add this mapping to the database.
+	const db_data = {
+		guild_id: interaction.guild.id,
+		message_id: message.id,
+		emoji_id: emojiToKey(emoji),
+		role_id: role.id,
+	};
+	try {
+		await database.addRoleReact(db_data);
+	} catch (err) {
+		logger.error(`Database failed to create ${JSON.stringify(db_data)}`, err);
+		return interaction.reply({
+			content: 'Something went wrong',
+			ephemeral: true,
+		});
+	}
+
+	// Try to add the emoji to the selected message. If this fails, also remove
+	// the created mapping from the database so this fails safe.
+	try {
+		await message.react(emoji);
+	} catch (err) {
+		logger.warn(`Could not add emoji ${emoji} to message ${message.url}`, err);
+		// FIXME use a transaction for this. This involves database work so
+		// maybe hold off until we have fully replace message commands with
+		// slash commands.
+		await database.removeRoleReact(db_data);
+		return interaction.reply({
+			content:
+				'I could not react to your selected message. Do I have the ' +
+				'right permissions?',
+			ephemeral: true,
+		});
+	}
+
+	return interaction.reply({
+		content: `Mapped ${emoji} to ${role} on message ${message.url}`,
 		ephemeral: true,
 	});
 }
