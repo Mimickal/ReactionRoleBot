@@ -14,19 +14,27 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  ******************************************************************************/
-const DISCORD_ID_MAX = 19;
-const PERMS = 'perms';
+const REACTS = 'reacts';
+const EMOJI_ID = 'emoji_id';
 
 exports.up = function(knex) {
-	return knex.schema.createTable(PERMS, table => {
-		table.string('guild_id', DISCORD_ID_MAX);
-		table.string('role_id',  DISCORD_ID_MAX);
+	console.error(
+		'Warning: this is a one-way migration. Animated emoji names cannot ' +
+		'be restored and will remain as IDs'
+	);
 
-		table.primary(['guild_id', 'role_id']);
-	});
+	return knex(REACTS)
+		.select(EMOJI_ID)
+		.where(EMOJI_ID, 'like', '<a:%')
+		.then(rows => Promise.all(
+			rows.map(row => knex(REACTS)
+				.where({  [EMOJI_ID]: row[EMOJI_ID] })
+				.update({ [EMOJI_ID]: row[EMOJI_ID].match(/<a?:.+:(\d{17,21})>/)[1] })
+			)
+		));
 };
 
 exports.down = function(knex) {
-	return knex.schema.dropTable(PERMS);
+	console.error('Cannot restore original animated emoji names');
 };
 

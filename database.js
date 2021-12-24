@@ -24,7 +24,7 @@ const PERMS = 'perms';
 const REACTS = 'reacts';
 const DISCORD_ID_LENGTH = {
 	MIN: 17,
-	MAX: 19
+	MAX: 22,
 };
 
 /**
