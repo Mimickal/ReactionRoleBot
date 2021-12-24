@@ -64,6 +64,16 @@ const REGISTRY = new SlashCommandRegistry()
 				.setRequired(true)
 			)
 		)
+		.addSubcommand(subcommand => subcommand
+			.setName('remove')
+			.setDescription('Remove a react-role from the selected message')
+			.setHandler(cmdRoleRemove)
+			.addStringOption(option => option
+				.setName('emoji')
+				.setDescription('The emoji mapping to remove')
+				.setRequired(true)
+			)
+		)
 	)
 ;
 
@@ -187,6 +197,53 @@ async function cmdRoleAdd(interaction) {
 
 	return interaction.reply({
 		content: `Mapped ${emoji} to ${role} on message ${message.url}`,
+		ephemeral: true,
+	});
+}
+
+/**
+ * Removes an emoji mapping from the currently selected message.
+ */
+async function cmdRoleRemove(interaction) {
+	const emoji   = Options.getEmoji(interaction, 'emoji', true);
+	let   message = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
+
+	if (!message) {
+		return interaction.reply({
+			content: 'No message selected! Select a message first.',
+			ephemeral: true,
+		});
+	}
+
+	if (!emoji) {
+		return interaction.reply({
+			content: 'Not a valid emoji!',
+			ephemeral: true,
+		});
+	}
+
+	message = await message.fetch();
+
+	try {
+		const emoji_id = emojiToKey(emoji);
+
+		// Intentionally NOT removing this role from users who currently have it
+		// FIXME need a transaction here too
+		await database.removeRoleReact({
+			message_id: message.id,
+			emoji_id: emoji_id,
+		});
+		await message.reactions.cache.get(emoji_id).remove();
+	} catch (err) {
+		logger.error(`Could not remove emoji ${emoji} from message ${message.url}`, err);
+		return interaction.reply({
+			content: 'I could not remove the react. Do I have the right permissions?',
+			ephemeral: true,
+		});
+	}
+
+	return interaction.reply({
+		content: `Removed ${emoji} from message ${message.url}`,
 		ephemeral: true,
 	});
 }
