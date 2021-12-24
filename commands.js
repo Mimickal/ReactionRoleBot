@@ -14,6 +14,24 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  ******************************************************************************/
+
+// Some notes for this file:
+//
+// - Always call message.fetch().
+//     This ensures Discord.js' caches (e.g. for reactions) are populated and up
+//     to date before doing anything.
+//
+// - Always fail safe.
+//     If any part of an operation fails, every action taken during that
+//     operation should be rolled back.
+//
+// - UI updates should come last.
+//     Updating what the user sees (e.g. sending message, adding a reaction)
+//     should always be done after other actions. Discord's client already shows
+//     a spinner while the bot is active, so we only need to confirm success or
+//     failure.
+//     The only exception to this is committing an active database transaction.
+
 const {
 	ApplicationCommandType,
 	Options,
