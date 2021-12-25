@@ -48,6 +48,7 @@ const {
 	asLines,
 	emojiToKey,
 	ephemReply,
+	unindent,
 } = require('./util');
 
 const ONE_HOUR_IN_MS = 60*60*1000;
@@ -166,11 +167,10 @@ async function cmdRoleAdd(interaction) {
 
 	// Prevent someone from modifying a server from outside the server.
 	if (interaction.guild !== message.guild || interaction.guild !== role.guild) {
-		// TODO use unindent
-		return ephemReply(interaction,
-			'Message and Role need to be in the same Server this command ' +
-			'was issued from!'
-		);
+		return ephemReply(interaction, unindent(`
+			Message and Role need to be in the same Server this command
+			was issued from!
+		`));
 	}
 
 	// Try to add this mapping to the database.

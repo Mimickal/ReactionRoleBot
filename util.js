@@ -113,11 +113,21 @@ function stringify(thing) {
 	}
 }
 
+/**
+ * Allows us to treat multi-line template strings as a single continuous line.
+ */
+function unindent(str) {
+	return str
+		.replace(/^\s*/, '')
+		.replace(/\n\t*/g, ' ');
+}
+
 module.exports = {
 	asLines,
 	detail,
 	emojiToKey,
 	ephemReply,
 	stringify,
+	unindent,
 };
 
