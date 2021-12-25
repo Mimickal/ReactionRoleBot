@@ -47,6 +47,7 @@ const logger = require('./logger');
 const {
 	asLines,
 	emojiToKey,
+	ephemReply,
 } = require('./util');
 
 const ONE_HOUR_IN_MS = 60*60*1000;
@@ -131,10 +132,7 @@ async function cmdSelect(interaction) {
 	SELECTED_MESSAGE_CACHE.del(user.id);
 	SELECTED_MESSAGE_CACHE.put(user.id, message, ONE_HOUR_IN_MS);
 
-	return interaction.reply({
-		content: `Selected message: ${message.url}`,
-		ephemeral: true,
-	});
+	return ephemReply(interaction, `Selected message: ${message.url}`);
 }
 
 /**
@@ -142,12 +140,10 @@ async function cmdSelect(interaction) {
  */
 async function cmdSelected(interaction) {
 	const message = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
-	return interaction.reply({
-		content: message
-			? `Currently selected: ${message.url}`
-			: 'No message currently selected',
-		ephemeral: true,
-	});
+	return ephemReply(interaction, message
+		? `Currently selected: ${message.url}`
+		: 'No message currently selected'
+	);
 }
 
 /**
@@ -159,17 +155,11 @@ async function cmdRoleAdd(interaction) {
 	let   message = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
 
 	if (!message) {
-		return interaction.reply({
-			content: 'No message selected! Select a message first.',
-			ephemeral: true,
-		});
+		return ephemReply(interaction, 'No message selected! Select a message first.');
 	}
 
 	if (!emoji) {
-		return interaction.reply({
-			content: 'Not a valid emoji!',
-			ephemeral: true,
-		});
+		return ephemReply(interaction, 'Not a valid emoji!');
 	}
 
 	message = await message.fetch();
@@ -177,12 +167,10 @@ async function cmdRoleAdd(interaction) {
 	// Prevent someone from modifying a server from outside the server.
 	if (interaction.guild !== message.guild || interaction.guild !== role.guild) {
 		// TODO use unindent
-		return interaction.reply({
-			content:
-				'Message and Role need to be in the same Server ' +
-				'this command was issued from',
-			ephemeral: true,
-		});
+		return ephemReply(interaction,
+			'Message and Role need to be in the same Server this command ' +
+			'was issued from!'
+		);
 	}
 
 	// Try to add this mapping to the database.
@@ -196,10 +184,7 @@ async function cmdRoleAdd(interaction) {
 		await database.addRoleReact(db_data);
 	} catch (err) {
 		logger.error(`Database failed to create ${JSON.stringify(db_data)}`, err);
-		return interaction.reply({
-			content: 'Something went wrong',
-			ephemeral: true,
-		});
+		return ephemReply(interaction, 'Something went wrong');
 	}
 
 	// Try to add the emoji to the selected message. If this fails, also remove
@@ -212,18 +197,12 @@ async function cmdRoleAdd(interaction) {
 		// maybe hold off until we have fully replace message commands with
 		// slash commands.
 		await database.removeRoleReact(db_data);
-		return interaction.reply({
-			content:
-				'I could not react to your selected message. Do I have the ' +
-				'right permissions?',
-			ephemeral: true,
-		});
+		return ephemReply(interaction,
+			'I could not react to your selected message. Do I have the right permissions?'
+		);
 	}
 
-	return interaction.reply({
-		content: `Mapped ${emoji} to ${role} on message ${message.url}`,
-		ephemeral: true,
-	});
+	return ephemReply(interaction, `Mapped ${emoji} to ${role} on message ${message.url}`);
 }
 
 /**
@@ -234,17 +213,11 @@ async function cmdRoleRemove(interaction) {
 	let   message = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
 
 	if (!message) {
-		return interaction.reply({
-			content: 'No message selected! Select a message first.',
-			ephemeral: true,
-		});
+		return ephemReply(interaction, 'No message selected! Select a message first.');
 	}
 
 	if (!emoji) {
-		return interaction.reply({
-			content: 'Not a valid emoji!',
-			ephemeral: true,
-		});
+		return ephemReply(interaction, 'Not a valid emoji!');
 	}
 
 	message = await message.fetch();
@@ -261,16 +234,12 @@ async function cmdRoleRemove(interaction) {
 		await message.reactions.cache.get(emoji_id).remove();
 	} catch (err) {
 		logger.error(`Could not remove emoji ${emoji} from message ${message.url}`, err);
-		return interaction.reply({
-			content: 'I could not remove the react. Do I have the right permissions?',
-			ephemeral: true,
-		});
+		return ephemReply(interaction,
+			'I could not remove the react. Do I have the right permissions?'
+		);
 	}
 
-	return interaction.reply({
-		content: `Removed ${emoji} from message ${message.url}`,
-		ephemeral: true,
-	});
+	return ephemReply(interaction, `Removed ${emoji} from message ${message.url}`);
 }
 
 module.exports = REGISTRY;
