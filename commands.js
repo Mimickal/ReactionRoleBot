@@ -36,13 +36,18 @@ const {
 	ApplicationCommandType,
 	Options,
 	SlashCommandRegistry,
+	bold,
+	codeBlock,
 } = require('discord-command-registry');
 const SELECTED_MESSAGE_CACHE = require('memory-cache');
 
 const database = require('./database');
 const info = require('./package.json');
 const logger = require('./logger');
-const { emojiToKey } = require('./util');
+const {
+	asLines,
+	emojiToKey,
+} = require('./util');
 
 const ONE_HOUR_IN_MS = 60*60*1000;
 
@@ -101,16 +106,18 @@ const REGISTRY = new SlashCommandRegistry()
  */
 async function cmdInfo(interaction) {
 	const stats = await database.getMetaStats();
-	await interaction.reply(
-		`${info.description}\n`                                +
-		`**Running version:** ${info.version}\n`               +
-		`**Source code:** ${info.homepage}\n\n`                +
-		'```Stats For Nerds:\n'                                +
-		`  - Servers bot is active in: ${stats.guilds}\n`      +
-		`  - Reaction role mappings:   ${stats.roles}\n`       +
-		`  - Total role assignments:   ${stats.assignments}\n` +
-		'```'
-	);
+	return interaction.reply(asLines([
+		info.description,
+		`${bold('Running version:')} ${info.version}`,
+		`${bold('Source code:')} ${info.homepage}`,
+		'',
+		codeBlock(asLines([
+			'Stats For Nerds:',
+			`  - Servers bot is active in: ${stats.guilds}`,
+			`  - Reaction role mappings:   ${stats.roles}`,
+			`  - Total role assignments:   ${stats.assignments}`,
+		])),
+	]));
 }
 
 /**

@@ -16,6 +16,16 @@
  ******************************************************************************/
 
 /**
+ * Joins the given array of strings using newlines.
+ */
+function asLines(lines) {
+	if (!Array.isArray(lines)) {
+		lines = [lines];
+	}
+	return lines.join('\n');
+}
+
+/**
  * Converts an emoji to a string we can use as a key (e.g. in a database).
  *
  * - Custom emojis (animated or otherwise) return their Discord ID.
@@ -33,6 +43,7 @@ function emojiToKey(emoji) {
 }
 
 module.exports = {
+	asLines,
 	emojiToKey,
 };
 
