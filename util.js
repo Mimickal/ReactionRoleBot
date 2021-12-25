@@ -14,6 +14,13 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  ******************************************************************************/
+const {
+	Guild,
+	Interaction,
+	User,
+} = require('discord.js');
+
+const logger = require('./logger');
 
 /**
  * Joins the given array of strings using newlines.
@@ -23,6 +30,20 @@ function asLines(lines) {
 		lines = [lines];
 	}
 	return lines.join('\n');
+}
+
+/**
+ * Like stringify, but provides more detail. Falls back on stringify.
+ */
+function detail(thing) {
+	if (thing instanceof Interaction) {
+		const int = thing;
+		return `${stringify(int.guild)} ${stringify(int.user)} ${stringify(int)}`;
+	}
+	else {
+		// Fall back on standard strings
+		return stringify(thing);
+	}
 }
 
 /**
@@ -42,8 +63,61 @@ function emojiToKey(emoji) {
 	}
 }
 
+/**
+ * Shortcut for sending an ephemeral reply to an interaction, since we do it so
+ * much.
+ */
+function ephemReply(interaction, content) {
+	logger.info(`Reply to ${detail(interaction)}: "${content}"`);
+	return interaction.reply({
+		content: content,
+		ephemeral: true,
+	});
+}
+
+/**
+ * Given a Discord.js object, returns a logger-friendly string describing it in
+ * better detail.
+ *
+ * This purposely only outputs IDs to limit the amount of user data logged.
+ */
+// TODO stolen from Zerda. Maybe pull this out to a module with the logger?
+function stringify(thing) {
+	let str;
+
+	if (!thing) {
+		return '[undefined]';
+	}
+	else if (typeof thing === 'string' || thing instanceof String) {
+		return thing;
+	}
+	else if (thing instanceof Guild) {
+		const guild = thing;
+		return `Guild ${guild.id}`;
+	}
+	else if (thing instanceof Interaction) {
+		const interaction = thing;
+		const cmd_str = Array.of(
+			interaction.commandName,
+			interaction.options.getSubcommandGroup(false),
+			interaction.options.getSubcommand(false),
+		).filter(x => x).join(' ');
+		return `Interaction "${cmd_str}"`;
+	}
+	else if (thing instanceof User) {
+		const user = thing;
+		return `User ${user.id}`;
+	}
+	else {
+		throw Error(`Unsupported type ${typeof(thing)}`);
+	}
+}
+
 module.exports = {
 	asLines,
+	detail,
 	emojiToKey,
+	ephemReply,
+	stringify,
 };
 
