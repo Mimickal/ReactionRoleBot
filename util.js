@@ -17,6 +17,7 @@
 const {
 	Guild,
 	Interaction,
+	Role,
 	User,
 } = require('discord.js');
 
@@ -103,6 +104,10 @@ function stringify(thing) {
 			interaction.options.getSubcommand(false),
 		).filter(x => x).join(' ');
 		return `Interaction "${cmd_str}"`;
+	}
+	else if (thing instanceof Role) {
+		const role = thing;
+		return `Role ${role.id}`;
 	}
 	else if (thing instanceof User) {
 		const user = thing;

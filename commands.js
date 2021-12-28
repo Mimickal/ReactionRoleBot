@@ -48,6 +48,7 @@ const {
 	asLines,
 	emojiToKey,
 	ephemReply,
+	stringify,
 	unindent,
 } = require('./util');
 
@@ -96,6 +97,20 @@ const REGISTRY = new SlashCommandRegistry()
 			.addStringOption(option => option
 				.setName('emoji')
 				.setDescription('The emoji mapping to remove')
+				.setRequired(true)
+			)
+		)
+	)
+	.addCommand(command => command
+		.setName('permission')
+		.setDescription('Manage who is allowed to configure the bot')
+		.addSubcommand(subcommand => subcommand
+			.setName('add')
+			.setDescription('Add a role that can configure the bot')
+			.setHandler(cmdPermAdd)
+			.addRoleOption(option => option
+				.setName('role')
+				.setDescription('The role that will be able to configure the bot')
 				.setRequired(true)
 			)
 		)
@@ -240,6 +255,33 @@ async function cmdRoleRemove(interaction) {
 	}
 
 	return ephemReply(interaction, `Removed ${emoji} from message ${message.url}`);
+}
+
+/**
+ * Adds a role that can configure this bot's settings for a guild.
+ */
+async function cmdPermAdd(interaction) {
+	const role = interaction.options.getRole('role', true);
+
+	if (interaction.guild !== role.guild) {
+		return ephemReply(interaction, 'Role must belong to this guild!');
+	}
+
+	try {
+		await database.addAllowedRole({
+			guild_id: interaction.guild.id,
+			role_id: role.id,
+		});
+	} catch (err) {
+		if (err.message.includes('UNIQUE constraint failed')) {
+			return ephemReply(interaction, `${role} can already configure me!`);
+		} else {
+			logger.error(`Could not add permission for ${stringify(role)}`, err);
+			return ephemReply(interaction, 'Something went wrong. Try again?');
+		}
+	}
+
+	return ephemReply(interaction, `${role} can now configure me`);
 }
 
 module.exports = REGISTRY;
