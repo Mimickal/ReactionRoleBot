@@ -22,6 +22,7 @@ const cache = require('./cache');
 const commands = require('./commands');
 const database = require('./database');
 const logger = require('./logger');
+const { unindent } = require('./util');
 
 const config = JSON.parse(fs.readFileSync(
 	process.argv[2] || '/etc/discord/ReactionRoleBot/config.json'
@@ -837,15 +838,6 @@ function cmdDef(handler, name, usage, description) {
  */
 function usage(name) {
 	return `\nUsage: ${COMMANDS.get(name).get('usage')}`;
-}
-
-/**
- * Allows us to treat multi-line template strings as a single continuous line.
- */
-function unindent(str) {
-	return str
-		.replace(/^\s*/, '')
-		.replace(/\n\t*/g, ' ');
 }
 
 /**
