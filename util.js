@@ -126,7 +126,7 @@ function stringify(thing) {
 		return thing;
 	}
 	else {
-		throw Error(`Unsupported type ${typeof(thing)}`);
+		return JSON.stringify(thing);
 	}
 }
 

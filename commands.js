@@ -198,7 +198,7 @@ async function cmdRoleAdd(interaction) {
 	try {
 		await database.addRoleReact(db_data);
 	} catch (err) {
-		logger.error(`Database failed to create ${JSON.stringify(db_data)}`, err);
+		logger.error(`Database failed to create ${stringify(db_data)}`, err);
 		return ephemReply(interaction, 'Something went wrong');
 	}
 
