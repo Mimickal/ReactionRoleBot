@@ -15,8 +15,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  ******************************************************************************/
 const {
+	Emoji,
 	Guild,
 	Interaction,
+	Message,
 	Role,
 	User,
 } = require('discord.js');
@@ -55,13 +57,10 @@ function detail(thing) {
  * - Non-emoji strings are considered an error and will throw accordingly.
  */
 function emojiToKey(emoji) {
-	if (emoji?.id) {
-		return emoji.id;
-	} else if (emoji?.match(/^\p{Extended_Pictographic}$/u)) {
-		return emoji;
-	} else {
+	if (!isEmoji(emoji)) {
 		throw Error(`Not an emoji key: ${emoji}`);
 	}
+	return emoji?.id ?? emoji;
 }
 
 /**
@@ -77,6 +76,13 @@ function ephemReply(interaction, content) {
 }
 
 /**
+ * Handles both custom Discord.js Emojis and standard unicode emojis.
+ */
+function isEmoji(thing) {
+	return thing?.match?.(/^\p{Extended_Pictographic}$/u) || thing instanceof Emoji;
+}
+
+/**
  * Given a Discord.js object, returns a logger-friendly string describing it in
  * better detail.
  *
@@ -84,13 +90,12 @@ function ephemReply(interaction, content) {
  */
 // TODO stolen from Zerda. Maybe pull this out to a module with the logger?
 function stringify(thing) {
-	let str;
-
 	if (!thing) {
 		return '[undefined]';
 	}
-	else if (typeof thing === 'string' || thing instanceof String) {
-		return thing;
+	else if (isEmoji(thing)) {
+		const emoji = thing;
+		return `Emoji ${emojiToKey(emoji)}`;
 	}
 	else if (thing instanceof Guild) {
 		const guild = thing;
@@ -105,6 +110,10 @@ function stringify(thing) {
 		).filter(x => x).join(' ');
 		return `Interaction "${cmd_str}"`;
 	}
+	else if (thing instanceof Message) {
+		const message = thing;
+		return `Message ${message.url}`;
+	}
 	else if (thing instanceof Role) {
 		const role = thing;
 		return `Role ${role.id}`;
@@ -112,6 +121,9 @@ function stringify(thing) {
 	else if (thing instanceof User) {
 		const user = thing;
 		return `User ${user.id}`;
+	}
+	else if (typeof thing === 'string' || thing instanceof String) {
+		return thing;
 	}
 	else {
 		throw Error(`Unsupported type ${typeof(thing)}`);

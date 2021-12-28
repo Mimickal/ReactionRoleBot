@@ -207,7 +207,7 @@ async function cmdRoleAdd(interaction) {
 	try {
 		await message.react(emoji);
 	} catch (err) {
-		logger.warn(`Could not add emoji ${emoji} to message ${message.url}`, err);
+		logger.warn(`Could not add ${stringify(emoji)} to ${stringify(message)}`, err);
 		// FIXME use a transaction for this. This involves database work so
 		// maybe hold off until we have fully replace message commands with
 		// slash commands.
@@ -217,7 +217,7 @@ async function cmdRoleAdd(interaction) {
 		);
 	}
 
-	return ephemReply(interaction, `Mapped ${emoji} to ${role} on message ${message.url}`);
+	return ephemReply(interaction, `Mapped ${emoji} to ${role} on ${stringify(message)}`);
 }
 
 /**
@@ -248,13 +248,16 @@ async function cmdRoleRemove(interaction) {
 		});
 		await message.reactions.cache.get(emoji_id).remove();
 	} catch (err) {
-		logger.error(`Could not remove emoji ${emoji} from message ${message.url}`, err);
+		logger.error(
+			`Could not remove ${stringify(emoji)} from ${stringify(message)}`,
+			err
+		);
 		return ephemReply(interaction,
 			'I could not remove the react. Do I have the right permissions?'
 		);
 	}
 
-	return ephemReply(interaction, `Removed ${emoji} from message ${message.url}`);
+	return ephemReply(interaction, `Removed ${emoji} from ${stringify(message)}`);
 }
 
 /**
