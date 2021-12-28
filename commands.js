@@ -48,6 +48,7 @@ const {
 	asLines,
 	emojiToKey,
 	ephemReply,
+	stringify,
 	unindent,
 } = require('./util');
 
@@ -96,6 +97,20 @@ const REGISTRY = new SlashCommandRegistry()
 			.addStringOption(option => option
 				.setName('emoji')
 				.setDescription('The emoji mapping to remove')
+				.setRequired(true)
+			)
+		)
+	)
+	.addCommand(command => command
+		.setName('permission')
+		.setDescription('Manage who is allowed to configure the bot')
+		.addSubcommand(subcommand => subcommand
+			.setName('add')
+			.setDescription('Add a role that can configure the bot')
+			.setHandler(cmdPermAdd)
+			.addRoleOption(option => option
+				.setName('role')
+				.setDescription('The role that will be able to configure the bot')
 				.setRequired(true)
 			)
 		)
@@ -183,7 +198,7 @@ async function cmdRoleAdd(interaction) {
 	try {
 		await database.addRoleReact(db_data);
 	} catch (err) {
-		logger.error(`Database failed to create ${JSON.stringify(db_data)}`, err);
+		logger.error(`Database failed to create ${stringify(db_data)}`, err);
 		return ephemReply(interaction, 'Something went wrong');
 	}
 
@@ -192,7 +207,7 @@ async function cmdRoleAdd(interaction) {
 	try {
 		await message.react(emoji);
 	} catch (err) {
-		logger.warn(`Could not add emoji ${emoji} to message ${message.url}`, err);
+		logger.warn(`Could not add ${stringify(emoji)} to ${stringify(message)}`, err);
 		// FIXME use a transaction for this. This involves database work so
 		// maybe hold off until we have fully replace message commands with
 		// slash commands.
@@ -202,7 +217,7 @@ async function cmdRoleAdd(interaction) {
 		);
 	}
 
-	return ephemReply(interaction, `Mapped ${emoji} to ${role} on message ${message.url}`);
+	return ephemReply(interaction, `Mapped ${emoji} to ${role} on ${stringify(message)}`);
 }
 
 /**
@@ -233,13 +248,43 @@ async function cmdRoleRemove(interaction) {
 		});
 		await message.reactions.cache.get(emoji_id).remove();
 	} catch (err) {
-		logger.error(`Could not remove emoji ${emoji} from message ${message.url}`, err);
+		logger.error(
+			`Could not remove ${stringify(emoji)} from ${stringify(message)}`,
+			err
+		);
 		return ephemReply(interaction,
 			'I could not remove the react. Do I have the right permissions?'
 		);
 	}
 
-	return ephemReply(interaction, `Removed ${emoji} from message ${message.url}`);
+	return ephemReply(interaction, `Removed ${emoji} from ${stringify(message)}`);
+}
+
+/**
+ * Adds a role that can configure this bot's settings for a guild.
+ */
+async function cmdPermAdd(interaction) {
+	const role = interaction.options.getRole('role', true);
+
+	if (interaction.guild !== role.guild) {
+		return ephemReply(interaction, 'Role must belong to this guild!');
+	}
+
+	try {
+		await database.addAllowedRole({
+			guild_id: interaction.guild.id,
+			role_id: role.id,
+		});
+	} catch (err) {
+		if (err.message.includes('UNIQUE constraint failed')) {
+			return ephemReply(interaction, `${role} can already configure me!`);
+		} else {
+			logger.error(`Could not add permission for ${stringify(role)}`, err);
+			return ephemReply(interaction, 'Something went wrong. Try again?');
+		}
+	}
+
+	return ephemReply(interaction, `${role} can now configure me`);
 }
 
 module.exports = REGISTRY;
