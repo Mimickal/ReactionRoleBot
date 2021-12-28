@@ -114,6 +114,18 @@ const REGISTRY = new SlashCommandRegistry()
 				.setRequired(true)
 			)
 		)
+		.addSubcommand(subcommand => subcommand
+			.setName('remove')
+			.setDescription('Remove a role that can configure the bot')
+			.setHandler(cmdPermRemove)
+			.addRoleOption(option => option
+				.setName('role')
+				.setDescription(
+					'The role that will no longer be able to configure the bot'
+				)
+				.setRequired(true)
+			)
+		)
 	)
 ;
 
@@ -285,6 +297,35 @@ async function cmdPermAdd(interaction) {
 	}
 
 	return ephemReply(interaction, `${role} can now configure me`);
+}
+
+/**
+ * Removes a role from being able to configure this bot's settings for a guild.
+ * A role can remove itself, which is dumb, but whatever.
+ */
+async function cmdPermRemove(interaction) {
+	const role = interaction.options.getRole('role', true);
+
+	if (interaction.guild !== role.guild) {
+		return ephemReply(interaction, 'Role must belong to this guild!');
+	}
+
+	let removed;
+	try {
+		removed = await database.removeAllowedRole({
+			guild_id: interaction.guild.id,
+			role_id: role.id,
+		});
+	} catch (err) {
+		logger.error(`Could not remove permission for ${stringify(role)}`, err);
+		return ephemReply(interaction, 'Something went wrong. Try again?');
+	}
+
+	return ephemReply(interaction,
+		`${role} ${
+			removed === 1 ? 'is no longer' : 'was already not'
+		} allowed to configure me`
+	);
 }
 
 module.exports = REGISTRY;
