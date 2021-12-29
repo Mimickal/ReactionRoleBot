@@ -69,6 +69,16 @@ const REGISTRY = new SlashCommandRegistry()
 		.setHandler(requireAuth(cmdSelect))
 	)
 	.addCommand(command => command
+		.setName('select-message-mobile')
+		.setDescription('Workaround for selecting messages on mobile')
+		.setHandler(requireAuth(cmdSelectMobile))
+		.addStringOption(option => option
+			.setName('message-url')
+			.setDescription('The URL for the message to select')
+			.setRequired(true)
+		)
+	)
+	.addCommand(command => command
 		.setName('selected')
 		.setDescription('Shows currently selected message')
 		.setHandler(requireAuth(cmdSelected))
@@ -224,6 +234,40 @@ async function cmdSelect(interaction) {
 	SELECTED_MESSAGE_CACHE.put(user.id, message, ONE_HOUR_IN_MS);
 
 	return ephemReply(interaction, `Selected message: ${message.url}`);
+}
+
+/**
+ * An alternative way to select messages using slash commands instead of context
+ * menus, since Discord mobile does not currently support context menus.
+ */
+async function cmdSelectMobile(interaction) {
+	function reportInvalid(err) {
+		logger.error('Failed to select message by URL', err);
+		return ephemReply(interaction, 'Invalid message link!');
+	}
+
+	const url = interaction.options.getString('message-url', true);
+	const match = url.match(/^https:\/\/discord\.com\/channels\/\d+\/(\d+)\/(\d+)$/);
+
+	if (!match) {
+		return reportInvalid();
+	}
+
+	const channel_id = match[1];
+	const message_id = match[2];
+
+	let message;
+	try {
+		const channel = await interaction.guild.channels.fetch(channel_id);
+		message = await channel?.messages.fetch(message_id);
+	} catch (err) {
+		return reportInvalid(err);
+	}
+
+	SELECTED_MESSAGE_CACHE.del(interaction.user.id);
+	SELECTED_MESSAGE_CACHE.put(interaction.user.id, message, ONE_HOUR_IN_MS);
+
+	return ephemReply(interaction, `Selected message: ${url}`);
 }
 
 /**

@@ -45,10 +45,22 @@ You need to select a message to add react roles to it. Right click on a message
 and use Discord's fancy context menu to select it. This is tracked per-user, so
 multiple users can interact with the bot at the same time.
 
-Due to current Discord limitations, this is not available on mobile devices
-(sorry).
+Due to current Discord limitations, context menus are not available on mobile
+devices (sorry). See below for alternative.
 
 ![](docs/select.png)
+
+## Selecting a Message on Mobile
+If you are on mobile, you might not have access to context menus. Don't worry,
+there's a workaround for you. Long-press the message, select
+"Copy Message Link", then use `/select-message-mobile` with the message URL
+instead.
+
+| This is the Message       | Long press and Share      | Tap Copy                  |
+|---------------------------|---------------------------|---------------------------|
+|![](docs/mobileselect1.png)|![](docs/mobileselect2.png)|![](docs/mobileselect3.png)|
+
+![](docs/mobileselect4.png)
 
 ## Adding a Role to the Message
 Use the `/role add` slash command to add a role to the message.
