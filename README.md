@@ -1,10 +1,10 @@
-## Overview
-A Discord bot that can assign roles based on message reactions.
+# Overview
+A Discord bot that can assign roles based on message reactions.<br/>
 [You can invite my live instance of the bot to your server with this link](
 https://discord.com/oauth2/authorize?client_id=692585944934514738&scope=bot&permissions=335881280
-)
+).
 
-## Why this bot?
+# Why this bot?
 Several other popular role-react bots exist, but many of them have some annoying
 catch. Some have uptime issues, some lock basic functionality behind premium pay
 walls, and some come with way too many other features that add bloat, requiring
@@ -12,15 +12,22 @@ convoluted web APIs for configuration. In most cases the source code also isn't
 available, so we can't do anything about it.
 
 This bot attempts to address these issues. It _only_ does role reacts, and is
-configured by typing to it in a Discord channel. Every feature of this bot is
-completely free to use, and always will be. It's also open source, so you can
-modify it to better suit your needs, or just download it and host your own
-instance. Basically, there's no bullshit.
+configured using slash commands. Every feature of this bot is completely free to
+use, and always will be. It's also open source, so you can modify it to better
+suit your needs, or just download it and host your own instance.
+
+Basically, there's no bullshit.
 
 # Usage
-You can interact with the bot by mentioning it (denoted here as `@bot`). The bot
-will currently only respond to users with the "Administrator" permissions.
+You can interact with the bot using slash commands.
 
+The bot will always respond to users with the "Administrator" permission.
+Additional roles can be whitelisted to modify the bot config for your guild.
+
+You write the post people can react to for their roles. The bot will not attempt
+to write its own posts for this (but will add its own emojis).
+
+## Permissions
 The role automatically created for the bot needs to be ordered above any role
 you want the bot to be able to assign. That role also needs to have access to
 the channel with your role-react post, and have have following permissions:
@@ -30,108 +37,75 @@ the channel with your role-react post, and have have following permissions:
 * **Read Message History** - To see posts in the channel before it joined
 * **Use External Emojis** - To use your custom emojis in role reacts
 * **Read Text Channels & See Voice Channels** - To see the role-react post
-Note that these permissions may be inherited from your `@everyone` settings.
 
-You write the post people can react to for their roles. The bot will not attempt
-to write its own posts for this. You can then tell the bot to select that post,
-and tell it which roles to map to which emoji reactions on that post.
+**Note:** These permissions may be inherited from your `@everyone` settings.
 
-**Selecting a post** - The bot tracks this on a per-user basis, so multiple users can
-interact with the bot at the same time.
-```
-# Command:
-@bot select <channel> <message_id>
-@bot select <channel_id> <message_id>
-@bot select <message_link>  # Not yet supported!
+## Selecting a Message
+You need to select a message to add react roles to it. Right click on a message
+and use Discord's fancy context menu to select it. This is tracked per-user, so
+multiple users can interact with the bot at the same time.
 
-# Examples:
-@bot select #role-assginment 123456789123456789
-@bot select 123456789123456789 1234556789123456789
-@bot select https://discordapp.com/channels/123456789123456789/123456789123456789/123456789123456789
-```
+Due to current Discord limitations, this is not available on mobile devices
+(sorry).
 
-**Adding a role to the post** - The bot will add its own reaction to the selected
-post with the given emoji.
-```
-# Command:
-@bot role-add <emoji> <role>
-@bot role-add <emoji> <role_id>
+![](docs/select.png)
 
-# Examples:
-@bot role-add 🦊 @test-role
-@bot role-add 🦊 1234556789123456789
-```
+## Adding a Role to the Message
+Use the `/role add` slash command to add a role to the message.
 
-**Removing a react-role from a post** - The bot will remove all reactions of
-this emoji from the selected post, without removing the associated role from any
-user who reacted to the post.
-```
-# Command
-@bot role-remove <emoji>
+![](docs/roleadd.png)
 
-# Examples:
-@bot role-remove 🦊
-```
+You can also remove a role from the message using `/role remove`, or remove
+all roles from the message using `/role remove-all`. This will remove all
+reactions from the post, but **will not** unassign any roles.
 
-**Removing all react-roles from a post** - The bot will remove all reactions
-from the selected post, without removing any of the associated roles from the
-members who reacted to it. This is mostly useful to work around a limitation
-with Discord's API, since it treats admins removing reacts the same was as users
-removing reacts.
-```
-# Command
-@bot role-remove-all
-```
+## Making Two Roles Mutually Exclusive
+Use the `/mutex add` slash command to make two (or more) roles mutually
+exclusive. If a user tries to add two roles that are mutually exclusive, the bot
+will automatically remove the first one they had. You can have multiple mutually
+exclusive groups.
 
-**Adding roles that can configure the bot** - By default, the bot will only
-listen to users who have the administrator permission. This command allows you
-to add additional roles that are allowed to configure the bot.
-```
-# Command
-@bot perm-add <role|role_id>
-```
+This setting is **server-wide**. If roles A, B, and C are all mutually
+exclusive, when a user with roles B and C tries to assign role A, the bot will
+automatically remove roles B and C from them **even if those roles were not
+assigned by the bot in the first place**.
 
-**Removing roles that can configure the bot** - Removes a role from being
-allowed to configure the bot. The bot will always listen to users with the
-administrator permissions. This cannot currently be disabled.
-```
-# Command
-@bot perm-remove <role|role_id>
-```
+Due to current Discord limitations, you can only add two roles per-command, so
+you'll need to run the command several times to make more than two roles
+mutually exclusive (once again, sorry).
 
-**Add mutually exclusive roles** - Makes two roles mutually exclusive. If a user
-tried to add two roles that are mutually exclusive, the bot will automatically
-remove the first one they had.
-```
-# Command
-@bot mutex-add <role1|role1_id> <role2|role2_id>
-```
+![](docs/mutexadd.png)
 
-**Remove mutually exclusive roles** - Removes the mutually exclusive constraint
-from two roles.
-```
-# Command
-@bot mutex-remove <role1|role1_id> <role2|role2_id>
-```
+Use `/mutex remove` to remove to mutually exclusive restriction on two roles.
 
-**Printing command usage info** - If you'd rather the bot tell you how to use
-it, instead of looking at this page, you can use this command.
-```
-# Command
-@bot help
-```
+## Adding Roles That Can Configure The Bot
+By default, the bot will only listen to users who have the "Administrator"
+permission. You can use `/permission add` to add additional roles that are
+allowed to configure the bot in your guild.
 
-You can also print the bot's description, version number, and link to the source
-code. This command is available to all users.
-```
-@bot info
-```
+![](docs/permadd.png)
+
+Use `/permission remove` to disallow a role from configuring the bot.<br/>
+**Note:** A user can remove their own permission to configure the bot if they
+are not an administrator!
+
+## Printing Bot Info
+You can use `/info` to print the bot's description, version number, link to the
+source code, and some fun stats. This command is available to all users and
+posts **non-ephemeral** replies (i.e. visible to everybody).
+
+![](docs/info.png)
 
 ## Rate Limits
 If the bot is taking a few moments to respond to reactions, it is likely hitting
 Discord's strict rate limit. This happens most often with mutually exclusive
 roles, since the bot needs to make several requests to make them work. The bot
 is registering the actions. Give it a few seconds to catch up.
+
+## @everyone
+Discord implements `@everyone` as a role under the hood. This means you can set
+up react roles for `@everyone` like you would for any other role. It's silly, it
+won't do anything, but you *could* do it...
 
 ## Hosting your own instance
 This bot is built on [discord.js](https://discord.js.org/#/) v13, so you'll need
