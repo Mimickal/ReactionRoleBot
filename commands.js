@@ -39,6 +39,7 @@ const {
 	bold,
 	codeBlock,
 } = require('discord-command-registry');
+const Discord = require('discord.js');
 const SELECTED_MESSAGE_CACHE = require('memory-cache');
 
 const database = require('./database');
@@ -65,12 +66,12 @@ const REGISTRY = new SlashCommandRegistry()
 	.addContextMenuCommand(command => command
 		.setName('select-message')
 		.setType(ApplicationCommandType.Message)
-		.setHandler(cmdSelect)
+		.setHandler(requireAuth(cmdSelect))
 	)
 	.addCommand(command => command
 		.setName('selected')
 		.setDescription('Shows currently selected message')
-		.setHandler(cmdSelected)
+		.setHandler(requireAuth(cmdSelected))
 	)
 	.addCommand(command => command
 		.setName('role')
@@ -78,7 +79,7 @@ const REGISTRY = new SlashCommandRegistry()
 		.addSubcommand(subcommand => subcommand
 			.setName('add')
 			.setDescription('Add a new react-role to the selected message')
-			.setHandler(cmdRoleAdd)
+			.setHandler(requireAuth(cmdRoleAdd))
 			.addStringOption(option => option
 				.setName('emoji')
 				.setDescription('The emoji to map the role to')
@@ -93,7 +94,7 @@ const REGISTRY = new SlashCommandRegistry()
 		.addSubcommand(subcommand => subcommand
 			.setName('remove')
 			.setDescription('Remove a react-role from the selected message')
-			.setHandler(cmdRoleRemove)
+			.setHandler(requireAuth(cmdRoleRemove))
 			.addStringOption(option => option
 				.setName('emoji')
 				.setDescription('The emoji mapping to remove')
@@ -107,7 +108,7 @@ const REGISTRY = new SlashCommandRegistry()
 		.addSubcommand(subcommand => subcommand
 			.setName('add')
 			.setDescription('Add a role that can configure the bot')
-			.setHandler(cmdPermAdd)
+			.setHandler(requireAuth(cmdPermAdd))
 			.addRoleOption(option => option
 				.setName('role')
 				.setDescription('The role that will be able to configure the bot')
@@ -117,7 +118,7 @@ const REGISTRY = new SlashCommandRegistry()
 		.addSubcommand(subcommand => subcommand
 			.setName('remove')
 			.setDescription('Remove a role that can configure the bot')
-			.setHandler(cmdPermRemove)
+			.setHandler(requireAuth(cmdPermRemove))
 			.addRoleOption(option => option
 				.setName('role')
 				.setDescription(
@@ -133,7 +134,7 @@ const REGISTRY = new SlashCommandRegistry()
 		.addSubcommand(subcommand => subcommand
 			.setName('add')
 			.setDescription('Make two react roles mutually exclusive for this server')
-			.setHandler(cmdMutexAdd)
+			.setHandler(requireAuth(cmdMutexAdd))
 			.addRoleOption(option => option
 				.setName('role1')
 				.setDescription('The first mutually exclusive role')
@@ -150,7 +151,7 @@ const REGISTRY = new SlashCommandRegistry()
 			.setDescription(
 				'Remove the mutually exclusive restriction on two react roles'
 			)
-			.setHandler(cmdMutexRemove)
+			.setHandler(requireAuth(cmdMutexRemove))
 			.addRoleOption(option => option
 				.setName('role1')
 				.setDescription('The first mutually exclusive role')
@@ -164,6 +165,27 @@ const REGISTRY = new SlashCommandRegistry()
 		)
 	)
 ;
+
+/**
+ * Middleware for command handlers that ensures the user initiating an
+ * interaction has permission to do so, and short-circuits if they don't.
+ */
+function requireAuth(handler) {
+	return async function(interaction) {
+		const member = await interaction.member.fetch(); // Ensures cache
+
+		if (member.permissions.has(Discord.Permissions.FLAGS.ADMINISTRATOR)) {
+			return handler(interaction);
+		}
+
+		const allowedRoles = await database.getAllowedRoles(interaction.guild.id);
+		if (allowedRoles.some(role => member.roles.cache.has(role))) {
+			return handler(interaction);
+		}
+
+		return ephemReply(interaction, "You don't have permission to use that!");
+	}
+}
 
 /**
  * Replies with info about this bot, including a link to the source code to be
