@@ -145,6 +145,23 @@ const REGISTRY = new SlashCommandRegistry()
 				.setRequired(true)
 			)
 		)
+		.addSubcommand(subcommand => subcommand
+			.setName('remove')
+			.setDescription(
+				'Remove the mutually exclusive restriction on two react roles'
+			)
+			.setHandler(cmdMutexRemove)
+			.addRoleOption(option => option
+				.setName('role1')
+				.setDescription('The first mutually exclusive role')
+				.setRequired(true)
+			)
+			.addRoleOption(option => option
+				.setName('role2')
+				.setDescription('The second mutually exclusive role')
+				.setRequired(true)
+			)
+		)
 	)
 ;
 
@@ -387,6 +404,39 @@ async function cmdMutexAdd(interaction) {
 
 	return ephemReply(interaction,
 		`Roles ${role1} and ${role2} are now mutually exclusive in this server`
+	);
+}
+
+/**
+ * Removes the mutually exclusive restriction for two roles in a guild.
+ */
+async function cmdMutexRemove(interaction) {
+	const role1 = interaction.options.getRole('role1', true);
+	const role2 = interaction.options.getRole('role2', true);
+
+	if (interaction.guild !== role1.guild || interaction.guild != role2.guild) {
+		return ephemReply(interaction, 'Roles must belong to this guild!');
+	}
+
+	let removed;
+	try {
+		removed = await database.removeMutexRole({
+			guild_id: interaction.guild.id,
+			role_id_1: role1.id,
+			role_id_2: role2.id,
+		});
+	} catch (err) {
+		logger.error(
+			`Could not remove mutex for ${stringify(role1)} and ${stringify(role2)}`,
+			err
+		);
+		return ephemReply(interaction, 'Something went wrong. Try again?');
+	}
+
+	return ephemReply(interaction,
+		`Roles ${role1} and ${role2} ${
+			removed === 1 ? 'are no longer' : 'were already not'
+		} mutually exclusive`
 	);
 }
 
