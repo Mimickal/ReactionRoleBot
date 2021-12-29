@@ -307,6 +307,7 @@ async function cmdRoleRemove(interaction) {
 
 	message = await message.fetch();
 
+	let removed;
 	try {
 		const emoji_id = emojiToKey(emoji);
 
@@ -316,7 +317,7 @@ async function cmdRoleRemove(interaction) {
 			message_id: message.id,
 			emoji_id: emoji_id,
 		});
-		await message.reactions.cache.get(emoji_id).remove();
+		removed = await message.reactions.cache.get(emoji_id)?.remove();
 	} catch (err) {
 		logger.error(
 			`Could not remove ${stringify(emoji)} from ${stringify(message)}`,
@@ -327,7 +328,11 @@ async function cmdRoleRemove(interaction) {
 		);
 	}
 
-	return ephemReply(interaction, `Removed ${emoji} from ${stringify(message)}`);
+	return ephemReply(interaction,
+		removed
+			? `Removed ${emoji} from ${stringify(message)}`
+			: `Selected message does not have ${emoji} reaction! ${message.url}`
+	);
 }
 
 /**
