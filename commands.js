@@ -127,6 +127,25 @@ const REGISTRY = new SlashCommandRegistry()
 			)
 		)
 	)
+	.addCommand(command => command
+		.setName('mutex')
+		.setDescription('Manage mutually exclusive react roles')
+		.addSubcommand(subcommand => subcommand
+			.setName('add')
+			.setDescription('Make two react roles mutually exclusive for this server')
+			.setHandler(cmdMutexAdd)
+			.addRoleOption(option => option
+				.setName('role1')
+				.setDescription('The first mutually exclusive role')
+				.setRequired(true)
+			)
+			.addRoleOption(option => option
+				.setName('role2')
+				.setDescription('The second mutually exclusive role')
+				.setRequired(true)
+			)
+		)
+	)
 ;
 
 /**
@@ -325,6 +344,49 @@ async function cmdPermRemove(interaction) {
 		`${role} ${
 			removed === 1 ? 'is no longer' : 'was already not'
 		} allowed to configure me`
+	);
+}
+
+/**
+ * Make two roles mutually exclusive for a guild.
+ * This is for the whole guild, not just a single message.
+ */
+async function cmdMutexAdd(interaction) {
+	const role1 = interaction.options.getRole('role1', true);
+	const role2 = interaction.options.getRole('role2', true);
+
+	if (interaction.guild !== role1.guild || interaction.guild != role2.guild) {
+		return ephemReply(interaction, 'Roles must belong to this guild!');
+	}
+
+	if (role1 === role2) {
+		return ephemReply(interaction,
+			'Cannot make a role mutually exclusive with itself!'
+		);
+	}
+
+	try {
+		await database.addMutexRole({
+			guild_id: interaction.guild.id,
+			role_id_1: role1.id,
+			role_id_2: role2.id,
+		});
+	} catch (err) {
+		if (err.message.includes('UNIQUE constraint failed')) {
+			return ephemReply(interaction,
+				`Roles ${role1} and ${role2} are already mutually exclusive!`
+			);
+		} else {
+			logger.error(unindent(`
+				Could not make ${stringify(role1)} and ${stringify(role2)}
+				mutually exclusive
+			`), err);
+			return ephemReply(interaction, 'Something went wrong. Try again?');
+		}
+	}
+
+	return ephemReply(interaction,
+		`Roles ${role1} and ${role2} are now mutually exclusive in this server`
 	);
 }
 
