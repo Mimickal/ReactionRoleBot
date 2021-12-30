@@ -56,7 +56,7 @@ const client = new Discord.Client({
 const Events = Discord.Constants.Events;
 client.on(Events.CLIENT_READY, events.onReady);
 client.on(Events.GUILD_CREATE, onGuildJoin);
-client.on(Events.GUILD_DELETE, onGuildLeave);
+client.on(Events.GUILD_DELETE, events.onGuildLeave);
 client.on(Events.INTERACTION_CREATE, onInteraction);
 client.on(Events.MESSAGE_REACTION_ADD, onReactionAdd);
 client.on(Events.MESSAGE_REACTION_REMOVE, onReactionRemove);
@@ -112,13 +112,6 @@ function onGuildJoin(guild) {
 		.catch(logError);
 }
 
-/**
- * Event handler for when the bot leaves (or is kicked from) a guild.
- */
-function onGuildLeave(guild) {
-	database.clearGuildInfo(guild.id)
-		.catch(logError);
-}
 
 /**
  * Event handler for getting a new slash commands.
