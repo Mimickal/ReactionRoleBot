@@ -21,6 +21,7 @@ const Discord = require('discord.js');
 const cache = require('./cache');
 const commands = require('./commands');
 const database = require('./database');
+const events = require('./events');
 const logger = require('./logger');
 const { unindent } = require('./util');
 
@@ -53,7 +54,7 @@ const client = new Discord.Client({
 });
 
 const Events = Discord.Constants.Events;
-client.on(Events.CLIENT_READY, onReady);
+client.on(Events.CLIENT_READY, events.onReady);
 client.on(Events.GUILD_CREATE, onGuildJoin);
 client.on(Events.GUILD_DELETE, onGuildLeave);
 client.on(Events.INTERACTION_CREATE, onInteraction);
@@ -65,13 +66,6 @@ client.login(config.token).catch(err => {
 	logError(err);
 	process.exit(1);
 });
-
-/**
- * Event handler for when the bot is logged in.
- */
-function onReady() {
-	logger.info(`Logged in as ${client.user.tag}`);
-}
 
 /**
  * Event handler for when the bot joins a new guild.
