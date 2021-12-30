@@ -14,9 +14,13 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  ******************************************************************************/
+const commands = require('./commands');
 const database = require('./database');
 const logger = require('./logger');
-const { stringify } = require('./util');
+const {
+	detail,
+	stringify,
+} = require('./util');
 
 /**
  * Event handler for when the bot leaves (or is kicked from) a guild.
@@ -32,8 +36,22 @@ async function onGuildLeave(guild) {
 }
 
 /**
+ * Event handler for receiving some kind of interaction.
+ * Logs the interaction and passes it on to the command handler.
+ */
+async function onInteraction(interaction) {
+	logger.info(`Received ${detail(interaction)}`);
+
+	try {
+		await commands.execute(interaction);
+	} catch (err) {
+		logger.error(`${detail(interaction)} error fell through:`, err);
+	}
+}
+
+/**
  * Event handler for when the bot is logged in.
- * Just prints the bot user we logged in as.
+ * Just logs the bot user we logged in as.
  */
 function onReady(client) {
 	logger.info(`Logged in as ${client.user.tag} (${client.user.id})`);
@@ -41,6 +59,7 @@ function onReady(client) {
 
 module.exports = {
 	onGuildLeave,
+	onInteraction,
 	onReady,
 };
 

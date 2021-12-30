@@ -19,7 +19,6 @@ const fs = require('fs');
 const Discord = require('discord.js');
 
 const cache = require('./cache');
-const commands = require('./commands');
 const database = require('./database');
 const events = require('./events');
 const logger = require('./logger');
@@ -57,7 +56,7 @@ const Events = Discord.Constants.Events;
 client.on(Events.CLIENT_READY, events.onReady);
 client.on(Events.GUILD_CREATE, onGuildJoin);
 client.on(Events.GUILD_DELETE, events.onGuildLeave);
-client.on(Events.INTERACTION_CREATE, onInteraction);
+client.on(Events.INTERACTION_CREATE, events.onInteraction);
 client.on(Events.MESSAGE_REACTION_ADD, onReactionAdd);
 client.on(Events.MESSAGE_REACTION_REMOVE, onReactionRemove);
 
@@ -113,12 +112,6 @@ function onGuildJoin(guild) {
 }
 
 
-/**
- * Event handler for getting a new slash commands.
- */
-function onInteraction(interaction) {
-	commands.execute(interaction);
-}
 
 /**
  * Event handler for when a reaction is added to a message.
