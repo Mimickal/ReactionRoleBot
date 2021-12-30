@@ -58,7 +58,7 @@ client.on(Events.GUILD_CREATE, onGuildJoin);
 client.on(Events.GUILD_DELETE, events.onGuildLeave);
 client.on(Events.INTERACTION_CREATE, events.onInteraction);
 client.on(Events.MESSAGE_REACTION_ADD, onReactionAdd);
-client.on(Events.MESSAGE_REACTION_REMOVE, onReactionRemove);
+client.on(Events.MESSAGE_REACTION_REMOVE, events.onReactionRemove);
 
 
 client.login(CONFIG.token).catch(err => {
@@ -158,36 +158,6 @@ function onReactionAdd(reaction, user) {
 			)
 			.then(() => database.incrementAssignCounter())
 			.then(() => logger.info(`added role ${roleId} to ${user}`));
-		})
-		.catch(logError);
-}
-
-/**
- * Event handler for when a reaction is removed from a message.
- * Checks if the message has any reaction roles configured, removing a role from
- * the user who removed their reaction, if applicable. Ignored reacts removed by
- * this bot, of course.
- */
-function onReactionRemove(reaction, user) {
-	// TODO How do we handle two emojis mapped to the same role?
-	// Do we only remove the role if the user doesn't have any of the mapped
-	// reactions? Or do we remove when any of the emojis are un-reacted?
-
-	if (user === client.user) {
-		return;
-	}
-
-	let emoji = emojiIdFromEmoji(reaction.emoji);
-
-	cache.getReactRole(reaction.message.id, emoji)
-		.then(roleId => {
-			if (!roleId) {
-				return;
-			}
-
-			return reaction.message.guild.members.fetch(user.id)
-				.then(member => member.roles.remove(roleId, 'Role bot removal'))
-				.then(() => logger.info(`removed role ${roleId} from ${user}`))
 		})
 		.catch(logError);
 }
