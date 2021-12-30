@@ -24,13 +24,13 @@ const events = require('./events');
 const logger = require('./logger');
 const { unindent } = require('./util');
 
-const config = JSON.parse(fs.readFileSync(
+const CONFIG = JSON.parse(fs.readFileSync(
 	process.argv[2] || '/etc/discord/ReactionRoleBot/config.json'
 ));
-const info = require('./package.json');
+const PACKAGE = require('./package.json');
 
 // Everything operates on IDs, so we can safely rely on partials.
-// This causes reaction events to fire for uncached messages.
+// This allows reaction events to fire for uncached messages.
 const client = new Discord.Client({
 	intents: [
 		Discord.Intents.FLAGS.GUILDS,
@@ -46,7 +46,7 @@ const client = new Discord.Client({
 	],
 	presence: {
 		activities: [{
-			name: `Running version ${info.version}`,
+			name: `Running version ${PACKAGE.version}`,
 			type: Discord.Constants.ActivityTypes.LISTENING,
 		}],
 	},
@@ -61,8 +61,8 @@ client.on(Events.MESSAGE_REACTION_ADD, onReactionAdd);
 client.on(Events.MESSAGE_REACTION_REMOVE, onReactionRemove);
 
 
-client.login(config.token).catch(err => {
-	logError(err);
+client.login(CONFIG.token).catch(err => {
+	logger.error('Failed to log in!', err);
 	process.exit(1);
 });
 
