@@ -17,6 +17,9 @@
 const DISCORD_ID_MAX = 19;
 const MUTEX = 'mutex';
 
+/**
+ * Creates a table mapping two roles as mutually exclusive for a guild.
+ */
 exports.up = function(knex) {
 	return knex.schema.createTable(MUTEX, table => {
 		table.string('guild_id',  DISCORD_ID_MAX);

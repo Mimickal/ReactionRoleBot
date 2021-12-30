@@ -16,6 +16,9 @@
  ******************************************************************************/
 const META = 'meta';
 
+/**
+ * Creates a table for counting how many total assignments there have been.
+ */
 exports.up = function(knex) {
 	return knex.schema.createTable(META, table => {
 		table.integer('assignments');
