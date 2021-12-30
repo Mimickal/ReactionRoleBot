@@ -46,8 +46,8 @@ const client = new Discord.Client({
 	],
 	presence: {
 		activities: [{
-			name: `Running version ${PACKAGE.version}`,
-			type: Discord.Constants.ActivityTypes.LISTENING,
+			name: `Version ${PACKAGE.version}`,
+			type: Discord.Constants.ActivityTypes.PLAYING,
 		}],
 	},
 });
