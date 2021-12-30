@@ -101,6 +101,11 @@ const REGISTRY = new SlashCommandRegistry()
 				.setRequired(true)
 			)
 		)
+		.addSubcommand(subcommand => subcommand
+			.setName('remove-all')
+			.setDescription('Remove ALL react-roles from the selected message')
+			.setHandler(requireAuth(cmdRoleRemoveAll))
+		)
 	)
 	.addCommand(command => command
 		.setName('permission')
@@ -332,6 +337,37 @@ async function cmdRoleRemove(interaction) {
 		removed
 			? `Removed ${emoji} from ${stringify(message)}`
 			: `Selected message does not have ${emoji} reaction! ${message.url}`
+	);
+}
+
+/**
+ * Removes all emoji mappings from the currently selected message.
+ */
+async function cmdRoleRemoveAll(interaction) {
+	let message = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
+
+	if (!message) {
+		return ephemReply(interaction, 'No message selected! Select a message first.');
+	}
+
+	message = await message.fetch();
+
+	let removed;
+	try {
+		// TODO Another important place for a transaction
+		removed = await database.removeRoleReact(message.id);
+		await message.reactions.removeAll();
+	} catch (err) {
+		logger.error(`Could not remove all reacts from ${stringify(message)}`, err);
+		return ephemReply(interaction,
+			'I could not remove the reacts. Do I have the right permissions?'
+		);
+	}
+
+	return ephemReply(interaction,
+		removed
+			? `Removed all react roles from ${stringify(message)}`
+			: `Selected message does not have any role reactions! ${message.url}`
 	);
 }
 
