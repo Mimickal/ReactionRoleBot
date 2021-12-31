@@ -40,9 +40,11 @@ const client = new Discord.Client({
 		Discord.Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
 	],
 	partials: [
+		// https://discordjs.guide/popular-topics/reactions.html#listening-for-reactions-on-old-messages
 		Discord.Constants.PartialTypes.MESSAGE,
 		Discord.Constants.PartialTypes.CHANNEL,
-		Discord.Constants.PartialTypes.REACTION
+		Discord.Constants.PartialTypes.REACTION,
+		Discord.Constants.PartialTypes.USER,
 	],
 	presence: {
 		activities: [{
