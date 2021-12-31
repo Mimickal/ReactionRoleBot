@@ -51,14 +51,14 @@ async function onInteraction(interaction) {
 }
 
 /**
- * Event handler for when a user removes a reaction from a message.
+ * Event handler for when a reaction is removed from a message.
  * Checks if the message has any reaction roles configured. If so, removes that
  * role from the user whose reaction was removed. Also re-adds the bot's
  * reaction if it is removed while a react-role is active.
  *
- * This is only fired when a user removes a reaction, either by clicking on an
- * emoji or through the message's "reactions" context menu. It is NOT fired when
- * a bot removes a reaction (Discord uses a seprate event for that).
+ * This is only fired when a single reaction is removed, either by clicking on
+ * an emoji or through the message's "reactions" context menu. It is NOT fired
+ * when a bot removes all reactions (Discord uses a seprate event for that).
  *
  * The user this handler receives is the user whose reaction was removed.
  * Discord does not tell us who actually removed that user's reaction. We can't
@@ -70,9 +70,11 @@ async function onReactionRemove(reaction, react_user) {
 	// Do we only remove the role if the user doesn't have any of the mapped
 	// reactions? Or do we remove when any of the emojis are un-reacted?
 
+	const emoji = reaction.emoji;
+
 	const role_id = await database.getRoleReact({
 		message_id: reaction.message.id,
-		emoji_id: emojiToKey(reaction.emoji),
+		emoji_id: emojiToKey(emoji),
 	});
 
 	// Ignore reactions on non-role-react posts
@@ -81,8 +83,8 @@ async function onReactionRemove(reaction, react_user) {
 	}
 
 	if (react_user === react_user.client.user) {
-		logger.info(`Replacing removed bot reaction ${stringify(reaction.emoji)}`);
-		return reaction.message.react(reaction.emoji);
+		logger.info(`Replacing removed bot reaction ${stringify(emoji)}`);
+		return reaction.message.react(emoji);
 	}
 
 	try {
