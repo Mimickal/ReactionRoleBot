@@ -51,6 +51,17 @@ async function onInteraction(interaction) {
 }
 
 /**
+ * Event handler for when messages are deleted in bulk.
+ * Removes any react roles configured for the deleted messages.
+ */
+async function onMessageBulkDelete(messages) {
+	for (const message of messages.values()) {
+		console.log(message.id);
+		onMessageDelete(message);
+	}
+}
+
+/**
  * Event handler for when a message is deleted.
  * Removes any react-roles configured for the deleted message.
  */
@@ -185,6 +196,7 @@ function onReady(client) {
 module.exports = {
 	onGuildLeave,
 	onInteraction,
+	onMessageBulkDelete,
 	onMessageDelete,
 	onReactionAdd,
 	onReactionRemove,

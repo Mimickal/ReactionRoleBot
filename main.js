@@ -57,6 +57,7 @@ client.on(Events.CLIENT_READY, events.onReady);
 client.on(Events.GUILD_CREATE, onGuildJoin);
 client.on(Events.GUILD_DELETE, events.onGuildLeave);
 client.on(Events.INTERACTION_CREATE, events.onInteraction);
+client.on(Events.MESSAGE_BULK_DELETE, events.onMessageBulkDelete);
 client.on(Events.MESSAGE_DELETE, events.onMessageDelete);
 client.on(Events.MESSAGE_REACTION_ADD, events.onReactionAdd);
 client.on(Events.MESSAGE_REACTION_REMOVE, events.onReactionRemove);
