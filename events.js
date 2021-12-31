@@ -66,6 +66,8 @@ async function onInteraction(interaction) {
  * handler will always just remove the role from the user.
  */
 async function onReactionRemove(reaction, react_user) {
+	logger.debug(`Removed ${detail(reaction)}`);
+
 	// TODO How do we handle two emojis mapped to the same role?
 	// Do we only remove the role if the user doesn't have any of the mapped
 	// reactions? Or do we remove when any of the emojis are un-reacted?
