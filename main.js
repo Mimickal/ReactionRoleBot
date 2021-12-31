@@ -18,8 +18,6 @@ const fs = require('fs');
 
 const Discord = require('discord.js');
 
-const cache = require('./cache');
-const database = require('./database');
 const events = require('./events');
 const logger = require('./logger');
 const { unindent } = require('./util');
