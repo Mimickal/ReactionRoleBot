@@ -51,6 +51,21 @@ async function onInteraction(interaction) {
 }
 
 /**
+ * Event handler for when a message is deleted.
+ * Removes any react-roles configured for the deleted message.
+ */
+async function onMessageDelete(message) {
+	try {
+		const removed = await database.removeAllRoleReacts(message.id);
+		if (removed) {
+			logger.info(`Deleted ${stringify(message)}, removed ${removed} mappings`);
+		}
+	} catch (err) {
+		logger.error(`Deleted ${stringify(message)} but failed to clear records`, err);
+	}
+}
+
+/**
  * Event handler for when a reaction is added to a message.
  * Checks if the message has any reaction roles configured. If so, adds that
  * role to the user who added the reaction. Removes any reaction that doesn't
@@ -170,6 +185,7 @@ function onReady(client) {
 module.exports = {
 	onGuildLeave,
 	onInteraction,
+	onMessageDelete,
 	onReactionAdd,
 	onReactionRemove,
 	onReady,
