@@ -14,6 +14,8 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  ******************************************************************************/
+const Perms = require('discord.js').Permissions.FLAGS;
+
 const commands = require('./commands');
 const database = require('./database');
 const logger = require('./logger');
@@ -21,7 +23,58 @@ const {
 	detail,
 	emojiToKey,
 	stringify,
+	unindent,
 } = require('./util');
+
+const REQUIRED_PERMISSIONS = Object.freeze({
+	[Perms.ADD_REACTIONS]:        'Add Reactions',
+	[Perms.MANAGE_MESSAGES]:      'Manage Messages',
+	[Perms.MANAGE_ROLES]:         'Manage Roles',
+	[Perms.READ_MESSAGE_HISTORY]: 'Read Message History',
+	[Perms.USE_EXTERNAL_EMOJIS]:  'Use External Emojis',
+	[Perms.VIEW_CHANNEL]:         'Read Text Channels & See Voice Channels',
+});
+
+/**
+ * Event handler for when the bot joins a new guild.
+ * DMs the guild owner with some basic instructions, including any missing
+ * required permissions.
+ */
+async function onGuildJoin(guild) {
+	logger.info(`Joined ${stringify(guild)}`);
+
+	let text = unindent(`
+		Hi there! My role needs to be ordered above any role you want me to
+		assign. You are getting this message because you are the server owner,
+		but anybody with Administrator permissions or an allowed role can
+		configure me.
+	`);
+
+	// This bot probably shouldn't be given the admin permission, but if we have
+	// it then the other ones don't matter.
+	// These permissions can also be inherited from the server's @everyone
+	// permissions.
+	const client_member = await guild.members.fetch(guild.client.user);
+	const missing_perms = Object.entries(REQUIRED_PERMISSIONS)
+		.filter(([ perm, name ]) => !client_member.permissions.has(perm, true))
+		.map(([ perm, name ]) => name);
+
+	if (missing_perms.length > 0) {
+		text += '\n\n';
+		text += unindent(`
+			Also, I am missing the following permissions. Without them, I
+			probably won't work right:
+		`);
+		text += '\n';
+		text += missing_perms.map(name => `- ${name}`).join('\n');
+
+		logger.info(`${stringify(guild)} missing permissions: ${missing_perms}`);
+	}
+
+	const guild_owner = await guild.fetchOwner();
+	const owner_dm = await guild_owner.createDM();
+	return owner_dm.send(text);
+}
 
 /**
  * Event handler for when the bot leaves (or is kicked from) a guild.
@@ -194,6 +247,7 @@ function onReady(client) {
 }
 
 module.exports = {
+	onGuildJoin,
 	onGuildLeave,
 	onInteraction,
 	onMessageBulkDelete,
