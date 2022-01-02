@@ -67,6 +67,15 @@ function _pickAndAssertFields(args, asserts) {
 }
 
 /**
+ * Simple assert to ensure value is a valid Discord ID.
+ */
+function _assertDiscordId(value) {
+	if (!isDiscordId(value)) {
+		throw Error(`Invalid Discord ID: ${value}`);
+	}
+}
+
+/**
  * Adds an emoji->role mapping for the given message. If the emoji is already
  * mapped to a role on this message, that mapping is replaced.
  *
@@ -109,6 +118,7 @@ function removeRoleReact(args) {
  * Removes all emoji->role mappings for the given message.
  */
 function removeAllRoleReacts(message_id) {
+	_assertDiscordId(message_id);
 	return knex(REACTS).where('message_id', message_id).del();
 }
 
@@ -133,6 +143,7 @@ function getRoleReact(args) {
  * null if the given message has no react roles set up.
  */
 function getRoleReactMap(message_id) {
+	_assertDiscordId(message_id);
 	return knex(REACTS)
 		.select(['emoji_id', 'role_id'])
 		.where('message_id', message_id)
@@ -150,6 +161,7 @@ function getRoleReactMap(message_id) {
  * Returns whether the given message has any role react mappings on it.
  */
 function isRoleReactMessage(message_id) {
+	_assertDiscordId(message_id);
 	return knex(REACTS)
 		.select('message_id')
 		.where('message_id', message_id)
@@ -161,6 +173,7 @@ function isRoleReactMessage(message_id) {
  * Deletes all the data stored for the given guild.
  */
 function clearGuildInfo(guild_id) {
+	_assertDiscordId(guild_id);
 	return Promise.all([REACTS, PERMS, MUTEX].map(table =>
 		knex(table).where('guild_id', guild_id).del()
 	));
@@ -221,6 +234,7 @@ function removeAllowedRole(args) {
  * Returns the list of roles that can configure this bot for the given guild.
  */
 function getAllowedRoles(guild_id) {
+	_assertDiscordId(guild_id);
 	return knex(PERMS)
 		.select('role_id')
 		.where({ guild_id: guild_id })
@@ -313,6 +327,11 @@ function getMutexRoles(args) {
  * instead of just an array.
  */
 function getMutexEmojis(roles) {
+	if (!Array.isArray(roles)) {
+		throw Error('roles must be an Array of Discord IDs');
+	}
+	roles.forEach(_assertDiscordId);
+
 	return knex(REACTS)
 		.select('emoji_id')
 		.whereIn('role_id', roles)
