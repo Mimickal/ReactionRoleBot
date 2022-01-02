@@ -60,7 +60,7 @@ function emojiToKey(emoji) {
 	if (!isEmoji(emoji)) {
 		throw Error(`Not an emoji key: ${emoji}`);
 	}
-	return emoji?.id ?? emoji;
+	return emoji?.id ?? emoji?.name ?? emoji;
 }
 
 /**

@@ -19,6 +19,7 @@ const database = require('./database');
 const logger = require('./logger');
 const {
 	detail,
+	emojiToKey,
 	stringify,
 } = require('./util');
 
@@ -50,6 +51,55 @@ async function onInteraction(interaction) {
 }
 
 /**
+ * Event handler for when a reaction is removed from a message.
+ * Checks if the message has any reaction roles configured. If so, removes that
+ * role from the user whose reaction was removed. Also re-adds the bot's
+ * reaction if it is removed while a react-role is active.
+ *
+ * This is only fired when a single reaction is removed, either by clicking on
+ * an emoji or through the message's "reactions" context menu. It is NOT fired
+ * when a bot removes all reactions (Discord uses a seprate event for that).
+ *
+ * The user this handler receives is the user whose reaction was removed.
+ * Discord does not tell us who actually removed that user's reaction. We can't
+ * tell when an admin removes a reaction instead of the user themselves, so this
+ * handler will always just remove the role from the user.
+ */
+async function onReactionRemove(reaction, react_user) {
+	// TODO How do we handle two emojis mapped to the same role?
+	// Do we only remove the role if the user doesn't have any of the mapped
+	// reactions? Or do we remove when any of the emojis are un-reacted?
+
+	const emoji = reaction.emoji;
+
+	const role_id = await database.getRoleReact({
+		message_id: reaction.message.id,
+		emoji_id: emojiToKey(emoji),
+	});
+
+	// Ignore reactions on non-role-react posts
+	if (!role_id) {
+		return;
+	}
+
+	if (react_user === react_user.client.user) {
+		logger.info(`Replacing removed bot reaction ${stringify(emoji)}`);
+		return reaction.message.react(emoji);
+	}
+
+	try {
+		const member = await reaction.message.guild.members.fetch(react_user.id);
+		await member.roles.remove(role_id, 'Role bot removal');
+		logger.info(`Removed Role ${role_id} from ${stringify(react_user)}`);
+	} catch (err) {
+		logger.error(
+			`Failed to remove Role ${role_id} from ${stringify(react_user)}`,
+			err
+		);
+	}
+}
+
+/**
  * Event handler for when the bot is logged in.
  * Just logs the bot user we logged in as.
  */
@@ -60,6 +110,7 @@ function onReady(client) {
 module.exports = {
 	onGuildLeave,
 	onInteraction,
+	onReactionRemove,
 	onReady,
 };
 
