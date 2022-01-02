@@ -16,12 +16,51 @@
  ******************************************************************************/
 const knexfile = require('./knexfile');
 const knex = require('knex')(knexfile[process.env.NODE_ENV || 'development']);
-const lodash = require('lodash/object');
+const lodash = require('lodash');
+
+const logger = require('./logger');
+const {
+	isDiscordId,
+	isEmojiStr,
+	stringify,
+} = require('./util');
 
 const META = 'meta';
 const MUTEX = 'mutex';
 const PERMS = 'perms';
 const REACTS = 'reacts';
+
+/**
+ * Helper asserting database arguments look the way we want them to.
+ *
+ * SQLite3 has pretty lax enforcement of its constraints, so we need to do a
+ * little extra work to ensure we're not putting garbage in the database.
+ *
+ * Also, since we want to constrain arguments everywhere we would assert on
+ * them, just do the argument selection here too.
+ */
+function _pickAndAssertFields(args, asserts) {
+	lodash.toPairs(asserts).forEach(([ key, type ]) => {
+		const value = args[key];
+		if (type === 'discord' && !isDiscordId(value)) {
+			throw Error(`${key} invalid Discord ID: ${value}`);
+		}
+		if (type === 'emoji' && !isDiscordId(value) && !isEmojiStr(value)) {
+			throw Error(`${key} invalid Emoji key: ${value}`);
+		}
+	});
+
+	const args_we_need = lodash.pick(args, lodash.keys(asserts));
+
+	// Extra arguments shouldn't happen in normal operation, but since we pick a
+	// subset of arguments anyway, just warn about them.
+	if (!lodash.isEqual(args, args_we_need)) {
+		const extras = lodash.omit(args, lodash.keys(asserts));
+		logger.warn(`Extra database query arguments: ${stringify(extras)}`);
+	}
+
+	return args_we_need;
+}
 
 /**
  * Adds an emoji->role mapping for the given message. If the emoji is already
@@ -30,10 +69,12 @@ const REACTS = 'reacts';
  * This is essentially an upsert, but "upsert" is a stupid word, so "add" it is.
  */
 function addRoleReact(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, [
-		'guild_id', 'message_id', 'emoji_id', 'role_id'
-	]);
+	const fields = _pickAndAssertFields(args, {
+		guild_id: 'discord',
+		message_id: 'discord',
+		emoji_id: 'emoji',
+		role_id: 'discord',
+	});
 
 	return knex(REACTS)
 		.insert(fields)
