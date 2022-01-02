@@ -51,6 +51,58 @@ async function onInteraction(interaction) {
 }
 
 /**
+ * Event handler for when a reaction is added to a message.
+ * Checks if the message has any reaction roles configured. If so, adds that
+ * role to the user who added the reaction.
+ */
+async function onReactionAdd(reaction, react_user) {
+	logger.debug(`Added ${detail(reaction)}`);
+
+	// Ignore our own reactions
+	if (react_user === react_user.client.user) {
+		return;
+	}
+
+	const role_id = await database.getRoleReact({
+		message_id: reaction.message.id,
+		emoji_id: emojiToKey(reaction.emoji),
+	});
+
+	// Ignore reactions on non-role-react posts
+	if (!role_id) {
+		return;
+	}
+
+	const member = await reaction.message.guild.members.fetch(react_user.id);
+
+	// Remove mutually exclusive roles from user
+	const mutex_roles = await database.getMutexRoles({
+		guild_id: reaction.message.guild.id,
+		role_id: role_id,
+	});
+	try {
+		await member.roles.remove(mutex_roles, 'Role bot removal (mutex)');
+		await member.roles.add(role_id, 'Role bot assignment');
+	} catch (err) {
+		logger.info(`Failed to update roles on ${stringify(user)}`, err);
+	}
+
+	// Remove associated mutually exclusive emoji reactions
+	const mutex_emojis = await database.getMutexEmojis(mutex_roles);
+	for await (const emoji of mutex_emojis) {
+		const mutex_reaction = reaction.message.reactions.resolve(emoji);
+		if (mutex_reaction) {
+			mutex_reaction.users.remove(react_user);
+		}
+	}
+
+	// Track assignment number for fun
+	await database.incrementAssignCounter();
+
+	logger.info(`Added Role ${role_id} to ${detail(react_user)}`);
+}
+
+/**
  * Event handler for when a reaction is removed from a message.
  * Checks if the message has any reaction roles configured. If so, removes that
  * role from the user whose reaction was removed. Also re-adds the bot's
@@ -66,6 +118,8 @@ async function onInteraction(interaction) {
  * handler will always just remove the role from the user.
  */
 async function onReactionRemove(reaction, react_user) {
+	logger.debug(`Removed ${detail(reaction)}`);
+
 	// TODO How do we handle two emojis mapped to the same role?
 	// Do we only remove the role if the user doesn't have any of the mapped
 	// reactions? Or do we remove when any of the emojis are un-reacted?
@@ -110,6 +164,7 @@ function onReady(client) {
 module.exports = {
 	onGuildLeave,
 	onInteraction,
+	onReactionAdd,
 	onReactionRemove,
 	onReady,
 };

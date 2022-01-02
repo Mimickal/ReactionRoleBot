@@ -18,8 +18,6 @@ const fs = require('fs');
 
 const Discord = require('discord.js');
 
-const cache = require('./cache');
-const database = require('./database');
 const events = require('./events');
 const logger = require('./logger');
 const { unindent } = require('./util');
@@ -59,7 +57,7 @@ client.on(Events.CLIENT_READY, events.onReady);
 client.on(Events.GUILD_CREATE, onGuildJoin);
 client.on(Events.GUILD_DELETE, events.onGuildLeave);
 client.on(Events.INTERACTION_CREATE, events.onInteraction);
-client.on(Events.MESSAGE_REACTION_ADD, onReactionAdd);
+client.on(Events.MESSAGE_REACTION_ADD, events.onReactionAdd);
 client.on(Events.MESSAGE_REACTION_REMOVE, events.onReactionRemove);
 
 
@@ -111,77 +109,6 @@ function onGuildJoin(guild) {
 		.then(owner => owner.createDM())
 		.then(dmChannel => dmChannel.send(info))
 		.catch(logError);
-}
-
-
-
-/**
- * Event handler for when a reaction is added to a message.
- * Checks if the message has any reaction roles configured, assigning a role to
- * the user who added the reaction, if applicable. Ignores reacts added by this
- * bot, of course. If a user attempts to assign a role that is mutually
- * exclusive with a role they already have, they will lose that first role, and
- * their reaction to the message for that role will be removed.
- */
-function onReactionAdd(reaction, user) {
-	if (user === client.user) {
-		return;
-	}
-
-	let emoji = emojiIdFromEmoji(reaction.emoji);
-
-	cache.getReactRole(reaction.message.id, emoji)
-		.then(roleId => {
-			if (!roleId) {
-				return;
-			}
-
-			// TODO if ever there was a time for async-await, this is it.
-			// TODO Also this seems to hit Discord's rate limit almost
-			// immediately because of each mutex react removal being its own
-			// request. Might need to look into .set
-			return Promise.all([
-				reaction.message.guild.members.fetch(user.id),
-				database.getMutexRoles({
-					guild_id: reaction.message.guild.id,
-					role_id:  roleId
-				})
-			])
-			.then(([member, mutexRoles]) =>
-				member.roles.remove(mutexRoles, 'Role bot removal (mutex)')
-				.then(() => member.roles.add(roleId, 'Role bot assignment'))
-				.then(() => database.getMutexEmojis(mutexRoles))
-				.then(mutexEmojis =>
-					asyncForEach(mutexEmojis, function(emoji) {
-						let mesRec = reaction.message.reactions.resolve(emoji);
-						if (mesRec) return mesRec.users.remove(user);
-					})
-				)
-			)
-			.then(() => database.incrementAssignCounter())
-			.then(() => logger.info(`added role ${roleId} to ${user}`));
-		})
-		.catch(logError);
-}
-
-/**
- * Takes an array of items and a function that may return a promise, then runs
- * the promise function for each item in the array, in sequence. Returns a
- * promise that resolves once every element has been processed.
- * Does not return the results because we don't need them.
- */
-async function asyncForEach(arr, promiseFunc) {
-	for await (let elem of arr) {
-		promiseFunc(elem);
-	}
-}
-
-/**
- * Built-in emojis are identified by name. Custom emojis are identified by ID.
- * This function handles that nuance for us.
- */
-function emojiIdFromEmoji(emoji) {
-	return emoji.id || emoji.name;
 }
 
 /**

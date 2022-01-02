@@ -19,6 +19,7 @@ const {
 	Guild,
 	Interaction,
 	Message,
+	MessageReaction,
 	Role,
 	User,
 } = require('discord.js');
@@ -42,6 +43,10 @@ function detail(thing) {
 	if (thing instanceof Interaction) {
 		const int = thing;
 		return `${stringify(int.guild)} ${stringify(int.user)} ${stringify(int)}`;
+	}
+	else if (thing instanceof MessageReaction) {
+		const reaction = thing;
+		return `${stringify(reaction)} on ${stringify(reaction.message)}`;
 	}
 	else {
 		// Fall back on standard strings
@@ -113,6 +118,10 @@ function stringify(thing) {
 	else if (thing instanceof Message) {
 		const message = thing;
 		return `Message ${message.url}`;
+	}
+	else if (thing instanceof MessageReaction) {
+		const reaction = thing;
+		return `Reaction ${emojiToKey(reaction.emoji)}`;
 	}
 	else if (thing instanceof Role) {
 		const role = thing;
