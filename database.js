@@ -22,10 +22,6 @@ const META = 'meta';
 const MUTEX = 'mutex';
 const PERMS = 'perms';
 const REACTS = 'reacts';
-const DISCORD_ID_LENGTH = {
-	MIN: 17,
-	MAX: 22,
-};
 
 /**
  * Adds an emoji->role mapping for the given message. If the emoji is already
@@ -263,11 +259,6 @@ function getMutexEmojis(roles) {
 }
 
 module.exports = {
-	DISCORD_ID_LENGTH,
-	META,
-	MUTEX,
-	PERMS,
-	REACTS,
 	addRoleReact,
 	removeRoleReact,
 	removeAllRoleReacts,
