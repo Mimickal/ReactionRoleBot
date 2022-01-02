@@ -30,6 +30,10 @@ const MUTEX = 'mutex';
 const PERMS = 'perms';
 const REACTS = 'reacts';
 
+// Poor man's enum
+const DISCORD_ASSERT = 1;
+const EMOJI_ASSERT = 2;
+
 /**
  * Helper asserting database arguments look the way we want them to.
  *
@@ -42,10 +46,10 @@ const REACTS = 'reacts';
 function _pickAndAssertFields(args, asserts) {
 	lodash.toPairs(asserts).forEach(([ key, type ]) => {
 		const value = args[key];
-		if (type === 'discord' && !isDiscordId(value)) {
+		if (type === DISCORD_ASSERT && !isDiscordId(value)) {
 			throw Error(`${key} invalid Discord ID: ${value}`);
 		}
-		if (type === 'emoji' && !isDiscordId(value) && !isEmojiStr(value)) {
+		if (type === EMOJI_ASSERT && !isDiscordId(value) && !isEmojiStr(value)) {
 			throw Error(`${key} invalid Emoji key: ${value}`);
 		}
 	});
@@ -70,10 +74,10 @@ function _pickAndAssertFields(args, asserts) {
  */
 function addRoleReact(args) {
 	const fields = _pickAndAssertFields(args, {
-		guild_id: 'discord',
-		message_id: 'discord',
-		emoji_id: 'emoji',
-		role_id: 'discord',
+		guild_id:   DISCORD_ASSERT,
+		message_id: DISCORD_ASSERT,
+		emoji_id:   EMOJI_ASSERT,
+		role_id:    DISCORD_ASSERT,
 	});
 
 	return knex(REACTS)
@@ -93,8 +97,10 @@ function addRoleReact(args) {
  * Removes an emoji->role mapping for the given message.
  */
 function removeRoleReact(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, ['message_id', 'emoji_id']);
+	const fields = _pickAndAssertFields(args, {
+		message_id: DISCORD_ASSERT,
+		emoji_id:   EMOJI_ASSERT,
+	});
 
 	return knex(REACTS).where(fields).del();
 }
@@ -111,8 +117,10 @@ function removeAllRoleReacts(message_id) {
  * is no role associated with the emoji on the message.
  */
 function getRoleReact(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, ['message_id', 'emoji_id']);
+	const fields = _pickAndAssertFields(args, {
+		message_id: DISCORD_ASSERT,
+		emoji_id:   EMOJI_ASSERT,
+	});
 
 	return knex(REACTS)
 		.first('role_id')
@@ -189,8 +197,10 @@ function getMetaStats() {
  * Adds a new role that's allowed to configure this bot for the given guild.
  */
 function addAllowedRole(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, ['guild_id', 'role_id']);
+	const fields = _pickAndAssertFields(args, {
+		guild_id: DISCORD_ASSERT,
+		role_id:  DISCORD_ASSERT,
+	});
 
 	return knex(PERMS).insert(fields);
 }
@@ -199,8 +209,10 @@ function addAllowedRole(args) {
  * Removes a role from being allowed to configure this bot for the given guild.
  */
 function removeAllowedRole(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, ['guild_id', 'role_id']);
+	const fields = _pickAndAssertFields(args, {
+		guild_id: DISCORD_ASSERT,
+		role_id:  DISCORD_ASSERT,
+	});
 
 	return knex(PERMS).where(fields).del();
 }
@@ -222,8 +234,11 @@ function getAllowedRoles(guild_id) {
  * throw a unique constraint violation exception.
  */
 function addMutexRole(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, ['guild_id', 'role_id_1', 'role_id_2']);
+	const fields = _pickAndAssertFields(args, {
+		guild_id:  DISCORD_ASSERT,
+		role_id_1: DISCORD_ASSERT,
+		role_id_2: DISCORD_ASSERT,
+	});
 
 	// Need to try role 1 and role 2 in reverse order too
 	let flipped = lodash.pick(args, ['guild_id']);
@@ -247,9 +262,12 @@ function addMutexRole(args) {
  * addMutexRole.
  */
 function removeMutexRole(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, ['guild_id', 'role_id_1', 'role_id_2']);
-	let flipped = lodash.pick(args, ['guild_id']);
+	const fields = _pickAndAssertFields(args, {
+		guild_id:  DISCORD_ASSERT,
+		role_id_1: DISCORD_ASSERT,
+		role_id_2: DISCORD_ASSERT,
+	});
+	const flipped = lodash.pick(fields, ['guild_id']);
 	flipped.role_id_1 = fields.role_id_2;
 	flipped.role_id_2 = fields.role_id_1;
 
@@ -266,8 +284,10 @@ function removeMutexRole(args) {
  * returned.
  */
 function getMutexRoles(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, ['guild_id', 'role_id'])
+	const fields = _pickAndAssertFields(args, {
+		guild_id: DISCORD_ASSERT,
+		role_id:  DISCORD_ASSERT,
+	});
 
 	// Roles could be added in either order, so fetch with both orders and
 	// combine the results.
