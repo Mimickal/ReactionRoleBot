@@ -147,14 +147,10 @@ function getRoleReactMap(message_id) {
 	return knex(REACTS)
 		.select(['emoji_id', 'role_id'])
 		.where('message_id', message_id)
-		.then(pairArray => {
-			let mapping = pairArray.reduce(
-				(map, pair) => map.set(pair.emoji_id, pair.role_id),
-				new Map()
-			);
-
-			return mapping.size > 0 ? mapping : null;
-		});
+		.then(rows => rows.length > 0
+			? new Map(rows.map(({ emoji_id, role_id }) => [emoji_id, role_id]))
+			: null
+		);
 }
 
 /**
@@ -183,7 +179,7 @@ function clearGuildInfo(guild_id) {
  * Increments the meta table's role assignment counter.
  */
 function incrementAssignCounter(num) {
-	return knex(META).increment('assignments', num || 1);
+	return knex(META).increment('assignments', num ?? 1);
 }
 
 /**
@@ -264,7 +260,8 @@ function addMutexRole(args) {
 		.where(fields)
 		.then(record => {
 			// If record exists, insert it again to cause a unique constraint
-			// exception. If not, try to insert the fields in reverse order.
+			// exception. If not, try to insert the fields in reverse order
+			// (which will also cause a unique constraint if it exists).
 			let version = record ? fields : flipped;
 			return knex(MUTEX).insert(version);
 		});
@@ -289,7 +286,7 @@ function removeMutexRole(args) {
 	return Promise.all([
 		knex(MUTEX).where(fields).del(),
 		knex(MUTEX).where(flipped).del()
-	]).then(([count1, count2]) => ((count1 || 0) + (count2 || 0)));
+	]).then(([count1, count2]) => ((count1 ?? 0) + (count2 ?? 0)));
 }
 
 /**
