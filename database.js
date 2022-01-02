@@ -102,6 +102,17 @@ function getRoleReactMap(message_id) {
 }
 
 /**
+ * Returns whether the given message has any role react mappings on it.
+ */
+function isRoleReactMessage(message_id) {
+	return knex(REACTS)
+		.select('message_id')
+		.where('message_id', message_id)
+		.first()
+		.then(result => !!result);
+}
+
+/**
  * Deletes all the data stored for the given guild.
  */
 function clearGuildInfo(guild_id) {
@@ -262,6 +273,7 @@ module.exports = {
 	removeAllRoleReacts,
 	getRoleReact,
 	getRoleReactMap,
+	isRoleReactMessage,
 	clearGuildInfo,
 	incrementAssignCounter,
 	getMetaStats,

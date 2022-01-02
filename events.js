@@ -53,7 +53,8 @@ async function onInteraction(interaction) {
 /**
  * Event handler for when a reaction is added to a message.
  * Checks if the message has any reaction roles configured. If so, adds that
- * role to the user who added the reaction.
+ * role to the user who added the reaction. Removes any reaction that doesn't
+ * correspond to a role.
  */
 async function onReactionAdd(reaction, react_user) {
 	logger.debug(`Added ${detail(reaction)}`);
@@ -63,14 +64,19 @@ async function onReactionAdd(reaction, react_user) {
 		return;
 	}
 
+	// Ignore reactions on non-role-react posts
+	if (!await database.isRoleReactMessage(reaction.message.id)) {
+		return;
+	}
+
 	const role_id = await database.getRoleReact({
 		message_id: reaction.message.id,
 		emoji_id: emojiToKey(reaction.emoji),
 	});
 
-	// Ignore reactions on non-role-react posts
+	// Someone added an emoji that isn't mapped to a role
 	if (!role_id) {
-		return;
+		return reaction.remove();
 	}
 
 	const member = await reaction.message.guild.members.fetch(react_user.id);
