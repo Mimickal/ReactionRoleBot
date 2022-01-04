@@ -112,13 +112,13 @@ function addRoleReact(args, trx) {
 /**
  * Removes an emoji->role mapping for the given message.
  */
-function removeRoleReact(args) {
+function removeRoleReact(args, trx) {
 	const fields = _pickAndAssertFields(args, {
 		message_id: DISCORD_ASSERT,
 		emoji_id:   EMOJI_ASSERT,
 	});
 
-	return knex(REACTS).where(fields).del();
+	return (trx ? trx(REACTS) : knex(REACTS)).where(fields).del();
 }
 
 /**

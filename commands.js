@@ -352,32 +352,33 @@ async function cmdRoleRemove(interaction) {
 
 	message = await message.fetch();
 
-	let removed;
-	try {
-		const emoji_id = emojiToKey(emoji);
+	return database.transaction(async trx => {
+		let removed;
+		try {
+			const emoji_id = emojiToKey(emoji);
 
-		// Intentionally NOT removing this role from users who currently have it
-		// FIXME need a transaction here too
-		await database.removeRoleReact({
-			message_id: message.id,
-			emoji_id: emoji_id,
-		});
-		removed = await message.reactions.cache.get(emoji_id)?.remove();
-	} catch (err) {
-		logger.error(
-			`Could not remove ${stringify(emoji)} from ${stringify(message)}`,
-			err
-		);
+			// Intentionally NOT removing this role from users who currently have it
+			await database.removeRoleReact({
+				message_id: message.id,
+				emoji_id: emoji_id,
+			}, trx);
+			removed = await message.reactions.cache.get(emoji_id)?.remove();
+		} catch (err) {
+			logger.error(
+				`Could not remove ${stringify(emoji)} from ${stringify(message)}`,
+				err
+			);
+			return ephemReply(interaction,
+				'I could not remove the react. Do I have the right permissions?'
+			);
+		}
+
 		return ephemReply(interaction,
-			'I could not remove the react. Do I have the right permissions?'
+			removed
+				? `Removed ${emoji} from ${stringify(message)}`
+				: `Selected message does not have ${emoji} reaction! ${message.url}`
 		);
-	}
-
-	return ephemReply(interaction,
-		removed
-			? `Removed ${emoji} from ${stringify(message)}`
-			: `Selected message does not have ${emoji} reaction! ${message.url}`
-	);
+	});
 }
 
 /**
