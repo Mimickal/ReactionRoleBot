@@ -307,36 +307,32 @@ async function cmdRoleAdd(interaction) {
 		`));
 	}
 
-	// Try to add this mapping to the database.
-	const db_data = {
-		guild_id: interaction.guild.id,
-		message_id: message.id,
-		emoji_id: emojiToKey(emoji),
-		role_id: role.id,
-	};
-	try {
-		await database.addRoleReact(db_data);
-	} catch (err) {
-		logger.error(`Database failed to create ${stringify(db_data)}`, err);
-		return ephemReply(interaction, 'Something went wrong');
-	}
+	return database.transaction(async trx => {
+		const db_data = {
+			guild_id: interaction.guild.id,
+			message_id: message.id,
+			emoji_id: emojiToKey(emoji),
+			role_id: role.id,
+		};
 
-	// Try to add the emoji to the selected message. If this fails, also remove
-	// the created mapping from the database so this fails safe.
-	try {
-		await message.react(emoji);
-	} catch (err) {
-		logger.warn(`Could not add ${stringify(emoji)} to ${stringify(message)}`, err);
-		// FIXME use a transaction for this. This involves database work so
-		// maybe hold off until we have fully replace message commands with
-		// slash commands.
-		await database.removeRoleReact(db_data);
-		return ephemReply(interaction,
-			'I could not react to your selected message. Do I have the right permissions?'
-		);
-	}
+		try {
+			await database.addRoleReact(db_data, trx);
+		} catch (err) {
+			logger.error(`Database failed to create ${stringify(db_data)}`, err);
+			return ephemReply(interaction, 'Something went wrong');
+		}
 
-	return ephemReply(interaction, `Mapped ${emoji} to ${role} on ${stringify(message)}`);
+		try {
+			await message.react(emoji);
+		} catch (err) {
+			logger.warn(`Could not add ${stringify(emoji)} to ${stringify(message)}`, err);
+			return ephemReply(interaction,
+				'I could not react to your selected message. Do I have the right permissions?'
+			);
+		}
+
+		return ephemReply(interaction, `Mapped ${emoji} to ${role} on ${stringify(message)}`);
+	});
 }
 
 /**

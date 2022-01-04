@@ -76,12 +76,19 @@ function _assertDiscordId(value) {
 }
 
 /**
+ * Just a pass-through for knex.transaction(...)
+ */
+function transaction(func) {
+	return knex.transaction(func);
+}
+
+/**
  * Adds an emoji->role mapping for the given message. If the emoji is already
  * mapped to a role on this message, that mapping is replaced.
  *
  * This is essentially an upsert, but "upsert" is a stupid word, so "add" it is.
  */
-function addRoleReact(args) {
+function addRoleReact(args, trx) {
 	const fields = _pickAndAssertFields(args, {
 		guild_id:   DISCORD_ASSERT,
 		message_id: DISCORD_ASSERT,
@@ -89,11 +96,11 @@ function addRoleReact(args) {
 		role_id:    DISCORD_ASSERT,
 	});
 
-	return knex(REACTS)
+	return (trx ? trx(REACTS) : knex(REACTS))
 		.insert(fields)
 		.catch(err => {
 			if (err.message.includes('UNIQUE constraint failed')) {
-				return knex(REACTS)
+				return (trx ? trx(REACTS) : knex(REACTS))
 					.where(lodash.pick(fields, ['message_id', 'emoji_id']))
 					.update({ role_id: fields.role_id });
 			} else {
@@ -336,6 +343,7 @@ function getMutexEmojis(roles) {
 }
 
 module.exports = {
+	transaction,
 	addRoleReact,
 	removeRoleReact,
 	removeAllRoleReacts,
