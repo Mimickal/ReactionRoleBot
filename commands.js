@@ -393,23 +393,24 @@ async function cmdRoleRemoveAll(interaction) {
 
 	message = await message.fetch();
 
-	let removed;
-	try {
-		// TODO Another important place for a transaction
-		removed = await database.removeRoleReact(message.id);
-		await message.reactions.removeAll();
-	} catch (err) {
-		logger.error(`Could not remove all reacts from ${stringify(message)}`, err);
-		return ephemReply(interaction,
-			'I could not remove the reacts. Do I have the right permissions?'
-		);
-	}
+	return database.transaction(async trx => {
+		let removed;
+		try {
+		removed = await database.removeAllRoleReacts(message.id);
+			await message.reactions.removeAll();
+		} catch (err) {
+			logger.error(`Could not remove all reacts from ${stringify(message)}`, err);
+			return ephemReply(interaction,
+				'I could not remove the reacts. Do I have the right permissions?'
+			);
+		}
 
-	return ephemReply(interaction,
-		removed
-			? `Removed all react roles from ${stringify(message)}`
-			: `Selected message does not have any role reactions! ${message.url}`
-	);
+		return ephemReply(interaction,
+			removed
+				? `Removed all react roles from ${stringify(message)}`
+				: `Selected message does not have any role reactions! ${message.url}`
+		);
+	});
 }
 
 /**

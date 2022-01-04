@@ -124,9 +124,9 @@ function removeRoleReact(args, trx) {
 /**
  * Removes all emoji->role mappings for the given message.
  */
-function removeAllRoleReacts(message_id) {
+function removeAllRoleReacts(message_id, trx) {
 	_assertDiscordId(message_id);
-	return knex(REACTS).where('message_id', message_id).del();
+	return (trx ? trx(REACTS) : knex(REACTS)).where('message_id', message_id).del();
 }
 
 /**
