@@ -20,7 +20,13 @@ module.exports = {
 		useNullAsDefault: true,
 		connection: {
 			filename: './dev.sqlite3'
-		}
+		},
+		// Helps us catch hanging transactions in dev by locking up the database
+		// if we forget to commit anything.
+		pool: {
+			min: 1,
+			max: 1,
+		},
 	},
 
 	testing: {
