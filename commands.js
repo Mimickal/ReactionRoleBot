@@ -179,7 +179,11 @@ const REGISTRY = new SlashCommandRegistry()
 			)
 		)
 	)
-;
+	.addCommand(command => command
+		.setName('reset-everything')
+		.setDescription('Deletes ALL configuration for this server')
+		.setHandler(requireAuth(cmdReset))
+	);
 
 /**
  * Middleware for command handlers that ensures the user initiating an
@@ -543,6 +547,21 @@ async function cmdMutexRemove(interaction) {
 			removed === 1 ? 'are no longer' : 'were already not'
 		} mutually exclusive`
 	);
+}
+
+/**
+ * Removes all data for a guild. This includes role react mappings, allowed
+ * configuration roles, and mutually exclusive constraints on roles.
+ */
+async function cmdReset(interaction) {
+	try {
+		await database.clearGuildInfo(interaction.guild.id);
+	} catch (err) {
+		logger.error(`Failed to clear data for ${stringify(interaction.guild)}`, err);
+		return ephemReply(interaction, 'Something went wrong. Try again?');
+	}
+
+	return ephemReply(interaction, 'Deleted all configuration for this guild!');
 }
 
 module.exports = REGISTRY;

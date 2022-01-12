@@ -101,6 +101,13 @@ Use `/permission remove` to disallow a role from configuring the bot.<br/>
 **Note:** A user can remove their own permission to configure the bot if they
 are not an administrator!
 
+## Delete All Configuration In Server
+You can use `/reset-everything` to remove *all* configuration the bot has for
+the guild the command was sent from. The bot does this automatically when it is
+kicked from a guild.
+
+This does not clear any server-side logs for to the guild.
+
 ## Printing Bot Info
 You can use `/info` to print the bot's description, version number, link to the
 source code, and some fun stats. This command is available to all users and
