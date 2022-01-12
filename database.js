@@ -16,16 +16,64 @@
  ******************************************************************************/
 const knexfile = require('./knexfile');
 const knex = require('knex')(knexfile[process.env.NODE_ENV || 'development']);
-const lodash = require('lodash/object');
+const lodash = require('lodash');
+
+const logger = require('./logger');
+const {
+	isDiscordId,
+	isEmojiStr,
+	stringify,
+} = require('./util');
 
 const META = 'meta';
 const MUTEX = 'mutex';
 const PERMS = 'perms';
 const REACTS = 'reacts';
-const DISCORD_ID_LENGTH = {
-	MIN: 17,
-	MAX: 22,
-};
+
+// Poor man's enum
+const DISCORD_ASSERT = 1;
+const EMOJI_ASSERT = 2;
+
+/**
+ * Helper asserting database arguments look the way we want them to.
+ *
+ * SQLite3 has pretty lax enforcement of its constraints, so we need to do a
+ * little extra work to ensure we're not putting garbage in the database.
+ *
+ * Also, since we want to constrain arguments everywhere we would assert on
+ * them, just do the argument selection here too.
+ */
+function _pickAndAssertFields(args, asserts) {
+	lodash.toPairs(asserts).forEach(([ key, type ]) => {
+		const value = args[key];
+		if (type === DISCORD_ASSERT && !isDiscordId(value)) {
+			throw Error(`${key} invalid Discord ID: ${value}`);
+		}
+		if (type === EMOJI_ASSERT && !isDiscordId(value) && !isEmojiStr(value)) {
+			throw Error(`${key} invalid Emoji key: ${value}`);
+		}
+	});
+
+	const args_we_need = lodash.pick(args, lodash.keys(asserts));
+
+	// Extra arguments shouldn't happen in normal operation, but since we pick a
+	// subset of arguments anyway, just warn about them.
+	if (!lodash.isEqual(args, args_we_need)) {
+		const extras = lodash.omit(args, lodash.keys(asserts));
+		logger.warn(`Extra database query arguments: ${stringify(extras)}`);
+	}
+
+	return args_we_need;
+}
+
+/**
+ * Simple assert to ensure value is a valid Discord ID.
+ */
+function _assertDiscordId(value) {
+	if (!isDiscordId(value)) {
+		throw Error(`Invalid Discord ID: ${value}`);
+	}
+}
 
 /**
  * Adds an emoji->role mapping for the given message. If the emoji is already
@@ -34,10 +82,12 @@ const DISCORD_ID_LENGTH = {
  * This is essentially an upsert, but "upsert" is a stupid word, so "add" it is.
  */
 function addRoleReact(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, [
-		'guild_id', 'message_id', 'emoji_id', 'role_id'
-	]);
+	const fields = _pickAndAssertFields(args, {
+		guild_id:   DISCORD_ASSERT,
+		message_id: DISCORD_ASSERT,
+		emoji_id:   EMOJI_ASSERT,
+		role_id:    DISCORD_ASSERT,
+	});
 
 	return knex(REACTS)
 		.insert(fields)
@@ -56,8 +106,10 @@ function addRoleReact(args) {
  * Removes an emoji->role mapping for the given message.
  */
 function removeRoleReact(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, ['message_id', 'emoji_id']);
+	const fields = _pickAndAssertFields(args, {
+		message_id: DISCORD_ASSERT,
+		emoji_id:   EMOJI_ASSERT,
+	});
 
 	return knex(REACTS).where(fields).del();
 }
@@ -66,6 +118,7 @@ function removeRoleReact(args) {
  * Removes all emoji->role mappings for the given message.
  */
 function removeAllRoleReacts(message_id) {
+	_assertDiscordId(message_id);
 	return knex(REACTS).where('message_id', message_id).del();
 }
 
@@ -74,8 +127,10 @@ function removeAllRoleReacts(message_id) {
  * is no role associated with the emoji on the message.
  */
 function getRoleReact(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, ['message_id', 'emoji_id']);
+	const fields = _pickAndAssertFields(args, {
+		message_id: DISCORD_ASSERT,
+		emoji_id:   EMOJI_ASSERT,
+	});
 
 	return knex(REACTS)
 		.first('role_id')
@@ -88,23 +143,21 @@ function getRoleReact(args) {
  * null if the given message has no react roles set up.
  */
 function getRoleReactMap(message_id) {
+	_assertDiscordId(message_id);
 	return knex(REACTS)
 		.select(['emoji_id', 'role_id'])
 		.where('message_id', message_id)
-		.then(pairArray => {
-			let mapping = pairArray.reduce(
-				(map, pair) => map.set(pair.emoji_id, pair.role_id),
-				new Map()
-			);
-
-			return mapping.size > 0 ? mapping : null;
-		});
+		.then(rows => rows.length > 0
+			? new Map(rows.map(({ emoji_id, role_id }) => [emoji_id, role_id]))
+			: null
+		);
 }
 
 /**
  * Returns whether the given message has any role react mappings on it.
  */
 function isRoleReactMessage(message_id) {
+	_assertDiscordId(message_id);
 	return knex(REACTS)
 		.select('message_id')
 		.where('message_id', message_id)
@@ -116,6 +169,7 @@ function isRoleReactMessage(message_id) {
  * Deletes all the data stored for the given guild.
  */
 function clearGuildInfo(guild_id) {
+	_assertDiscordId(guild_id);
 	return Promise.all([REACTS, PERMS, MUTEX].map(table =>
 		knex(table).where('guild_id', guild_id).del()
 	));
@@ -125,7 +179,7 @@ function clearGuildInfo(guild_id) {
  * Increments the meta table's role assignment counter.
  */
 function incrementAssignCounter(num) {
-	return knex(META).increment('assignments', num || 1);
+	return knex(META).increment('assignments', num ?? 1);
 }
 
 /**
@@ -152,8 +206,10 @@ function getMetaStats() {
  * Adds a new role that's allowed to configure this bot for the given guild.
  */
 function addAllowedRole(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, ['guild_id', 'role_id']);
+	const fields = _pickAndAssertFields(args, {
+		guild_id: DISCORD_ASSERT,
+		role_id:  DISCORD_ASSERT,
+	});
 
 	return knex(PERMS).insert(fields);
 }
@@ -162,8 +218,10 @@ function addAllowedRole(args) {
  * Removes a role from being allowed to configure this bot for the given guild.
  */
 function removeAllowedRole(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, ['guild_id', 'role_id']);
+	const fields = _pickAndAssertFields(args, {
+		guild_id: DISCORD_ASSERT,
+		role_id:  DISCORD_ASSERT,
+	});
 
 	return knex(PERMS).where(fields).del();
 }
@@ -172,6 +230,7 @@ function removeAllowedRole(args) {
  * Returns the list of roles that can configure this bot for the given guild.
  */
 function getAllowedRoles(guild_id) {
+	_assertDiscordId(guild_id);
 	return knex(PERMS)
 		.select('role_id')
 		.where({ guild_id: guild_id })
@@ -185,8 +244,11 @@ function getAllowedRoles(guild_id) {
  * throw a unique constraint violation exception.
  */
 function addMutexRole(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, ['guild_id', 'role_id_1', 'role_id_2']);
+	const fields = _pickAndAssertFields(args, {
+		guild_id:  DISCORD_ASSERT,
+		role_id_1: DISCORD_ASSERT,
+		role_id_2: DISCORD_ASSERT,
+	});
 
 	// Need to try role 1 and role 2 in reverse order too
 	let flipped = lodash.pick(args, ['guild_id']);
@@ -198,7 +260,8 @@ function addMutexRole(args) {
 		.where(fields)
 		.then(record => {
 			// If record exists, insert it again to cause a unique constraint
-			// exception. If not, try to insert the fields in reverse order.
+			// exception. If not, try to insert the fields in reverse order
+			// (which will also cause a unique constraint if it exists).
 			let version = record ? fields : flipped;
 			return knex(MUTEX).insert(version);
 		});
@@ -210,9 +273,12 @@ function addMutexRole(args) {
  * addMutexRole.
  */
 function removeMutexRole(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, ['guild_id', 'role_id_1', 'role_id_2']);
-	let flipped = lodash.pick(args, ['guild_id']);
+	const fields = _pickAndAssertFields(args, {
+		guild_id:  DISCORD_ASSERT,
+		role_id_1: DISCORD_ASSERT,
+		role_id_2: DISCORD_ASSERT,
+	});
+	const flipped = lodash.pick(fields, ['guild_id']);
 	flipped.role_id_1 = fields.role_id_2;
 	flipped.role_id_2 = fields.role_id_1;
 
@@ -220,7 +286,7 @@ function removeMutexRole(args) {
 	return Promise.all([
 		knex(MUTEX).where(fields).del(),
 		knex(MUTEX).where(flipped).del()
-	]).then(([count1, count2]) => ((count1 || 0) + (count2 || 0)));
+	]).then(([count1, count2]) => ((count1 ?? 0) + (count2 ?? 0)));
 }
 
 /**
@@ -229,8 +295,10 @@ function removeMutexRole(args) {
  * returned.
  */
 function getMutexRoles(args) {
-	// TODO sanity check values
-	let fields = lodash.pick(args, ['guild_id', 'role_id'])
+	const fields = _pickAndAssertFields(args, {
+		guild_id: DISCORD_ASSERT,
+		role_id:  DISCORD_ASSERT,
+	});
 
 	// Roles could be added in either order, so fetch with both orders and
 	// combine the results.
@@ -256,6 +324,11 @@ function getMutexRoles(args) {
  * instead of just an array.
  */
 function getMutexEmojis(roles) {
+	if (!Array.isArray(roles)) {
+		throw Error('roles must be an Array of Discord IDs');
+	}
+	roles.forEach(_assertDiscordId);
+
 	return knex(REACTS)
 		.select('emoji_id')
 		.whereIn('role_id', roles)
@@ -263,11 +336,6 @@ function getMutexEmojis(roles) {
 }
 
 module.exports = {
-	DISCORD_ID_LENGTH,
-	META,
-	MUTEX,
-	PERMS,
-	REACTS,
 	addRoleReact,
 	removeRoleReact,
 	removeAllRoleReacts,

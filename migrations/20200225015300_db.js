@@ -17,6 +17,12 @@
 const DISCORD_ID_MAX = 19;
 const REACTS = 'reacts';
 
+/**
+ * Create a table mapping a reaction emoji to a role on a message in a guild.
+ *
+ * Using a composite primary key of message_id and emoji_id doubles as a thing
+ * that prevents multiple database entries for the same react.
+ */
 exports.up = function(knex) {
 	return knex.schema.createTable(REACTS, table => {
 		table.string('guild_id',   DISCORD_ID_MAX);

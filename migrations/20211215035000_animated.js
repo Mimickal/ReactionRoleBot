@@ -17,8 +17,16 @@
 const REACTS = 'reacts';
 const EMOJI_ID = 'emoji_id';
 
+/**
+ * Animated emojis did not exist when this bot was first written. When Discord
+ * added them, the bot did not recognize their format, so it dumped the entire
+ * "toString" value to the database.
+ *
+ * That logic has since been fixed. This migration correspondingly fixes any
+ * broken animated emoji entries already in the database.
+ */
 exports.up = function(knex) {
-	console.error(
+	console.warn(
 		'Warning: this is a one-way migration. Animated emoji names cannot ' +
 		'be restored and will remain as IDs'
 	);

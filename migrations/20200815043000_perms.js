@@ -17,6 +17,10 @@
 const DISCORD_ID_MAX = 19;
 const PERMS = 'perms';
 
+/**
+ * Creates a table that maps a role to a guild, so that role can be allowed to
+ * configure the bot in the guild.
+ */
 exports.up = function(knex) {
 	return knex.schema.createTable(PERMS, table => {
 		table.string('guild_id', DISCORD_ID_MAX);

@@ -27,6 +27,14 @@ const {
 const logger = require('./logger');
 
 /**
+ * Most IDs are between 17 and 19 characters, but I have seen some patterns
+ * matching to 20 for custom emoji IDs, so let's just future-proof this and
+ * match up to 22. If this bot is still being used by the time we need to update
+ * that, well, cool.
+ */
+const DISCORD_ID_PATTERN = RegExp('^\\d{17,22}$');
+
+/**
  * Joins the given array of strings using newlines.
  */
 function asLines(lines) {
@@ -62,7 +70,7 @@ function detail(thing) {
  * - Non-emoji strings are considered an error and will throw accordingly.
  */
 function emojiToKey(emoji) {
-	if (!isEmoji(emoji)) {
+	if (!_isEmoji(emoji)) {
 		throw Error(`Not an emoji key: ${emoji}`);
 	}
 	return emoji?.id ?? emoji?.name ?? emoji;
@@ -83,8 +91,22 @@ function ephemReply(interaction, content) {
 /**
  * Handles both custom Discord.js Emojis and standard unicode emojis.
  */
-function isEmoji(thing) {
-	return thing?.match?.(/^\p{Extended_Pictographic}$/u) || thing instanceof Emoji;
+function _isEmoji(thing) {
+	return isEmojiStr(thing) || thing instanceof Emoji;
+}
+
+/**
+ * Matches Discord IDs.
+ */
+function isDiscordId(str) {
+	return str?.match?.(DISCORD_ID_PATTERN);
+}
+
+/**
+ * Matches built-in unicode emoji literals.
+ */
+function isEmojiStr(str) {
+	return str?.match?.(/^\p{Extended_Pictographic}$/u);
 }
 
 /**
@@ -98,7 +120,7 @@ function stringify(thing) {
 	if (!thing) {
 		return '[undefined]';
 	}
-	else if (isEmoji(thing)) {
+	else if (_isEmoji(thing)) {
 		const emoji = thing;
 		return `Emoji ${emojiToKey(emoji)}`;
 	}
@@ -153,6 +175,8 @@ module.exports = {
 	detail,
 	emojiToKey,
 	ephemReply,
+	isDiscordId,
+	isEmojiStr,
 	stringify,
 	unindent,
 };
