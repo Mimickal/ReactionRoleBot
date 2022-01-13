@@ -172,6 +172,14 @@ function isRoleReactMessage(message_id) {
 		.then(result => !!result);
 }
 
+function getRoleReactMessages(guild_id) {
+	_assertDiscordId(guild_id);
+	return knex(REACTS)
+		.distinct('message_id')
+		.where('guild_id', guild_id)
+		.then(rows => rows.map(row => row.message_id));
+}
+
 /**
  * Deletes all the data stored for the given guild.
  */
@@ -350,6 +358,7 @@ module.exports = {
 	getRoleReact,
 	getRoleReactMap,
 	isRoleReactMessage,
+	getRoleReactMessages,
 	clearGuildInfo,
 	incrementAssignCounter,
 	getMetaStats,
