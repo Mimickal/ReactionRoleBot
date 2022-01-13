@@ -24,7 +24,14 @@ const logger = Winston.createLogger();
 
 const logFormat = Winston.format.combine(
 	Winston.format.timestamp(),
-	Winston.format.printf( ({ level, message, timestamp }) => {
+	Winston.format.printf( ({ level, message, timestamp, stack, ...extra }) => {
+		// Winston appends the error message to the log message by default, even
+		// when stack traces are enabled, so we need to manually unappend it.
+		// https://github.com/winstonjs/winston/issues/1660?ts=4#issuecomment-569413211
+		if (stack) {
+			const err = extra[Symbol.for('splat')][0];
+			message = message.replace(` ${err.message}`, '') + `\n${stack}`;
+		}
 		return `${timestamp} [${level}]: ${message}`;
 	}),
 );
