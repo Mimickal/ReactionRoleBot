@@ -77,6 +77,11 @@ const REGISTRY = new SlashCommandRegistry()
 		.setType(ApplicationCommandType.Message)
 		.setHandler(requireAuth(cmdSelect))
 	)
+	.addContextMenuCommand(command => command
+		.setName('select-copy-target')
+		.setType(ApplicationCommandType.Message)
+		.setHandler(requireAuth(cmdSelectCopy))
+	)
 	.addCommand(command => command
 		.setName('select-message-mobile')
 		.setDescription('Workaround for selecting messages on mobile')
@@ -92,25 +97,24 @@ const REGISTRY = new SlashCommandRegistry()
 		.setDescription('Shows currently selected message')
 		.setHandler(requireAuth(cmdSelected))
 	)
-	.addContextMenuCommand(command => command
-		.setName('select-copy-target')
-		.setType(ApplicationCommandType.Message)
-		.setHandler(requireAuth(cmdSelectCopy))
-	)
 	.addCommand(command => command
-		.setName('select-copy-target-mobile')
-		.setDescription('Workaround for selecting copy target message on mobile')
-		.setHandler(requireAuth(cmdSelectCopyMobile))
-		.addStringOption(option => option
-			.setName('message-url')
-			.setDescription('The URL for the clone target message to select')
-			.setRequired(true)
+		.setName('copy')
+		.setDescription('Copy react-role mappings to another message')
+		.addSubcommand(subcommand => subcommand
+			.setName('select-target-mobile')
+			.setDescription('Workaround for selecting copy target message on mobile')
+			.setHandler(requireAuth(cmdSelectCopyMobile))
+			.addStringOption(option => option
+				.setName('message-url')
+				.setDescription('The URL for the clone target message to select')
+				.setRequired(true)
+			)
 		)
-	)
-	.addCommand(command => command
-		.setName('selected-copy-target')
-		.setDescription('Shows currently selected copy target message')
-		.setHandler(requireAuth(cmdSelectedCopy))
+		.addSubcommand(subcommand => subcommand
+			.setName('selected-target')
+			.setDescription('Shows currently selected copy target message')
+			.setHandler(requireAuth(cmdSelectedCopy))
+		)
 	)
 	.addCommand(command => command
 		.setName('role')
