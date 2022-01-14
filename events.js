@@ -166,10 +166,16 @@ async function onReactionAdd(reaction, react_user) {
 		role_id: role_id,
 	});
 	try {
-		await member.roles.remove(mutex_roles, 'Role bot removal (mutex)');
-		await member.roles.add(role_id, 'Role bot assignment');
+		// Do assignment in one request so we don't hit rate limit so quickly.
+		let new_roles = member.roles.cache.clone();
+		const removed = mutex_roles
+			.map(mutex_id => new_roles.delete(mutex_id))
+			.find(was_deleted => was_deleted);
+		new_roles = Array.from(new_roles.keys());
+		new_roles.push(role_id);
+		await member.roles.set(new_roles, `Role bot assignment${removed && ' (mutex)'}`);
 	} catch (err) {
-		logger.info(`Failed to update roles on ${stringify(user)}`, err);
+		logger.warn(`Failed to update roles on ${stringify(react_user)}`, err);
 	}
 
 	// Remove associated mutually exclusive emoji reactions
