@@ -40,7 +40,7 @@ const {
 	codeBlock,
 } = require('discord-command-registry');
 const Discord = require('discord.js');
-const SELECTED_MESSAGE_CACHE = require('memory-cache');
+const NodeCache = require('node-cache');
 
 const database = require('./database');
 const { rethrowHandled } = database;
@@ -54,7 +54,13 @@ const {
 	unindent,
 } = require('./util');
 
-const ONE_HOUR_IN_MS = 60*60*1000;
+
+const ONE_HOUR_IN_SECONDS = 60*60;
+const SELECTED_MESSAGE_CACHE = new NodeCache({
+	stdTTL: ONE_HOUR_IN_SECONDS,
+	checkperiod: ONE_HOUR_IN_SECONDS,
+	useClones: false,
+});
 
 const REGISTRY = new SlashCommandRegistry()
 	.addCommand(command => command
@@ -236,7 +242,7 @@ async function cmdSelect(interaction) {
 
 	// Always clear selected message first, just to be safe and consistent.
 	SELECTED_MESSAGE_CACHE.del(user.id);
-	SELECTED_MESSAGE_CACHE.put(user.id, message, ONE_HOUR_IN_MS);
+	SELECTED_MESSAGE_CACHE.set(user.id, message);
 
 	return ephemReply(interaction, `Selected message: ${message.url}`);
 }
@@ -270,7 +276,7 @@ async function cmdSelectMobile(interaction) {
 	}
 
 	SELECTED_MESSAGE_CACHE.del(interaction.user.id);
-	SELECTED_MESSAGE_CACHE.put(interaction.user.id, message, ONE_HOUR_IN_MS);
+	SELECTED_MESSAGE_CACHE.set(interaction.user.id, message);
 
 	return ephemReply(interaction, `Selected message: ${url}`);
 }
