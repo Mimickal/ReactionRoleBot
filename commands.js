@@ -56,11 +56,13 @@ const {
 
 
 const ONE_HOUR_IN_SECONDS = 60*60;
-const SELECTED_MESSAGE_CACHE = new NodeCache({
+const CACHE_SETTINGS = {
 	stdTTL: ONE_HOUR_IN_SECONDS,
 	checkperiod: ONE_HOUR_IN_SECONDS,
 	useClones: false,
-});
+}
+const SELECTED_MESSAGE_CACHE = new NodeCache(CACHE_SETTINGS);
+const CLONE_MESSAGE_CACHE = new NodeCache(CACHE_SETTINGS);
 
 const REGISTRY = new SlashCommandRegistry()
 	.addCommand(command => command
@@ -89,6 +91,26 @@ const REGISTRY = new SlashCommandRegistry()
 		.setName('selected')
 		.setDescription('Shows currently selected message')
 		.setHandler(requireAuth(cmdSelected))
+	)
+	.addContextMenuCommand(command => command
+		.setName('select-copy-target')
+		.setType(ApplicationCommandType.Message)
+		.setHandler(requireAuth(cmdSelectCopy))
+	)
+	.addCommand(command => command
+		.setName('select-copy-target-mobile')
+		.setDescription('Workaround for selecting copy target message on mobile')
+		.setHandler(requireAuth(cmdSelectCopyMobile))
+		.addStringOption(option => option
+			.setName('message-url')
+			.setDescription('The URL for the clone target message to select')
+			.setRequired(true)
+		)
+	)
+	.addCommand(command => command
+		.setName('selected-copy-target')
+		.setDescription('Shows currently selected copy target message')
+		.setHandler(requireAuth(cmdSelectedCopy))
 	)
 	.addCommand(command => command
 		.setName('role')
@@ -237,14 +259,28 @@ async function cmdInfo(interaction) {
  * Saves a user's selected message for subsequent actions.
  */
 async function cmdSelect(interaction) {
+	const message = _selectCommon(interaction, SELECTED_MESSAGE_CACHE);
+	return ephemReply(interaction, `Selected message: ${message.url}`);
+}
+
+/**
+ * Saves a user's selected clone target message for subsequent clone.
+ */
+async function cmdSelectCopy(interaction) {
+	const message = _selectCommon(interaction, CLONE_MESSAGE_CACHE);
+	return ephemReply(interaction, `Selected copy target: ${message.url}`);
+}
+
+// Common logic between cmdSelect and cmdSelectClone
+function _selectCommon(interaction, cache) {
 	const user    = interaction.user;
 	const message = interaction.options.getMessage('message', true);
 
 	// Always clear selected message first, just to be safe and consistent.
-	SELECTED_MESSAGE_CACHE.del(user.id);
-	SELECTED_MESSAGE_CACHE.set(user.id, message);
+	cache.del(user.id);
+	cache.set(user.id, message);
 
-	return ephemReply(interaction, `Selected message: ${message.url}`);
+	return message;
 }
 
 /**
@@ -252,8 +288,27 @@ async function cmdSelect(interaction) {
  * menus, since Discord mobile does not currently support context menus.
  */
 async function cmdSelectMobile(interaction) {
+	const url = await _selectCloneCommon(interaction, SELECTED_MESSAGE_CACHE);
+	if (url) {
+		return ephemReply(interaction, `Selected message: ${url}`);
+	}
+}
+
+/**
+ * An alternative way to select clone target messages using slash commands
+ * instead of context menus.
+ */
+async function cmdSelectCopyMobile(interaction) {
+	const url = await _selectCloneCommon(interaction, CLONE_MESSAGE_CACHE);
+	if (url) {
+		return ephemReply(interaction, `Selected copy target: ${url}`);
+	}
+}
+
+// Common logic between cmdSelectMobile and cmdSelectCloneMobile
+async function _selectCloneCommon(interaction, cache) {
 	function reportInvalid(err) {
-		logger.error('Failed to select message by URL', err);
+		logger.warn('Failed to select message by URL', err);
 		return ephemReply(interaction, 'Invalid message link!');
 	}
 
@@ -275,10 +330,10 @@ async function cmdSelectMobile(interaction) {
 		return reportInvalid(err);
 	}
 
-	SELECTED_MESSAGE_CACHE.del(interaction.user.id);
-	SELECTED_MESSAGE_CACHE.set(interaction.user.id, message);
+	cache.del(interaction.user.id);
+	cache.set(interaction.user.id, message);
 
-	return ephemReply(interaction, `Selected message: ${url}`);
+	return url;
 }
 
 /**
@@ -289,6 +344,17 @@ async function cmdSelected(interaction) {
 	return ephemReply(interaction, message
 		? `Currently selected: ${message.url}`
 		: 'No message currently selected'
+	);
+}
+
+/**
+ * Shows a user their currently selected copy target message.
+ */
+async function cmdSelectedCopy(interaction) {
+	const message = CLONE_MESSAGE_CACHE.get(interaction.user.id);
+	return ephemReply(interaction, message
+		? `Current copy target: ${message.url}`
+		: 'No copy target message currently selected'
 	);
 }
 
