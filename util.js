@@ -77,6 +77,17 @@ function emojiToKey(emoji) {
 }
 
 /**
+ * Same as {@link ephemReply}, but to edit an existing ephemeral response.
+ */
+function ephemEdit(interaction, content) {
+	logger.info(`Edit to ${detail(interaction)}: "${content}"`);
+	return interaction.editReply({
+		content: content,
+		ephemeral: true,
+	});
+}
+
+/**
  * Shortcut for sending an ephemeral reply to an interaction, since we do it so
  * much.
  */
@@ -174,6 +185,7 @@ module.exports = {
 	asLines,
 	detail,
 	emojiToKey,
+	ephemEdit,
 	ephemReply,
 	isDiscordId,
 	isEmojiStr,

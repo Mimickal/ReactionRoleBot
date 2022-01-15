@@ -49,6 +49,7 @@ const logger = require('./logger');
 const {
 	asLines,
 	emojiToKey,
+	ephemEdit,
 	ephemReply,
 	stringify,
 	unindent,
@@ -114,6 +115,13 @@ const REGISTRY = new SlashCommandRegistry()
 			.setName('selected-target')
 			.setDescription('Shows currently selected copy target message')
 			.setHandler(requireAuth(cmdSelectedCopy))
+		)
+		.addSubcommand(subcommand => subcommand
+			.setName('execute')
+			.setDescription(
+				'Copy role-react mappings from selected message to target message'
+			)
+			.setHandler(requireAuth(cmdCopyMappings))
 		)
 	)
 	.addCommand(command => command
@@ -643,6 +651,78 @@ async function cmdReset(interaction) {
 	}
 
 	return ephemReply(interaction, 'Deleted all configuration for this guild!');
+}
+
+/**
+ * Copies role-react mappings from the selected message to the copy target
+ * message. This requires both a message and a copy target to be selected.
+ */
+async function cmdCopyMappings(interaction) {
+	let msg_from = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
+	let msg_copy = CLONE_MESSAGE_CACHE.get(interaction.user.id);
+
+	if (!msg_from) {
+		return ephemReply(interaction,
+			'No message selected! Select a message first.'
+		);
+	}
+
+	if (!msg_copy) {
+		return ephemReply(interaction,
+			'No copy target selected! Select a copy target message first.'
+		);
+	}
+
+	msg_from = await msg_from.fetch();
+	msg_copy = await msg_copy.fetch();
+
+	// Prevent modifying a server from outside a server
+	const guild = interaction.guild;
+	if (guild !== msg_from.guild || guild !== msg_copy.guild) {
+		return ephemReply(interaction, unindent(`
+			Source and target messages need to be in the same Server this
+			command was issued from!
+		`));
+	}
+
+	// Need to reply to keep the interaction token alive while we copy
+	await ephemReply(interaction, 'Copying, this may take a moment...');
+
+	return database.transaction(async trx => {
+		const mapping = await database.getRoleReactMap(msg_from.id, trx);
+		for await (const [emoji_id, role_id] of mapping.entries()) {
+			try {
+				await database.addRoleReact({
+					guild_id:   guild.id,
+					message_id: msg_copy.id,
+					emoji_id:   emoji_id,
+					role_id:    role_id,
+				}, trx);
+			} catch (err) {
+				logger.error('Failed to copy roles', err);
+				await ephemEdit(interaction, 'Something went wrong. Try again?');
+				rethrowHandled(err);
+			}
+
+			try {
+				await msg_copy.react(emoji_id);
+			} catch (err) {
+				logger.warn(`Cannot copy roles to ${msg_copy.url}`);
+				await ephemEdit(interaction, unindent(`
+					Could not add reacts to the target message. Do I have the
+					right permissions?
+				`));
+				rethrowHandled(err);
+			}
+		}
+
+		return ephemEdit(interaction,
+			'Copied react-role mappings.\n' +
+			`Source: ${msg_from.url}\n` +
+			`Target: ${msg_copy.url}\n` +
+			'You can delete the original message now.'
+		);
+	});
 }
 
 module.exports = REGISTRY;
