@@ -18,13 +18,13 @@ const fs = require('fs');
 
 const Discord = require('discord.js');
 
-const events = require('./src/events');
-const logger = require('./src/logger');
+const events = require('./events');
+const logger = require('./logger');
 
 const CONFIG = JSON.parse(fs.readFileSync(
 	process.argv[2] || '/etc/discord/ReactionRoleBot/config.json'
 ));
-const PACKAGE = require('./package.json');
+const PACKAGE = require('../package.json');
 
 // Everything operates on IDs, so we can safely rely on partials.
 // This allows reaction events to fire for uncached messages.
