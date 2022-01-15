@@ -76,10 +76,34 @@ function _assertDiscordId(value) {
 }
 
 /**
- * Just a pass-through for knex.transaction(...)
+ * A pass-through for knex.transaction(...) that suppresses errors we have
+ * already handled.
+ *
+ * Knex always returns a rejected promist from a rolled back transaction, and
+ * rolls back transactions when Errors are thrown from the transaction
+ * block.
+ *
+ * We don't have a great way to differentiate between database Errors and
+ * Discord Errors based on their prototype. The oly way is to wrap each method
+ * in their own try-catch, so that makes Knex' catch-all rejection behavior
+ * problematic. This is our solution.
  */
 function transaction(func) {
-	return knex.transaction(func);
+	return knex.transaction(func).catch(err => {
+		if (!err.handled) throw err;
+		logger.debug('Suppressing handled error within transaction');
+	});
+}
+
+/**
+ * Marks an Error as "handled" then rethrows it.
+ * See {@link transaction} for why this is needed.
+ */
+ function rethrowHandled(err) {
+	if (err instanceof Error) {
+		err.handled = true;
+	}
+	throw err;
 }
 
 /**
@@ -352,6 +376,7 @@ function getMutexEmojis(roles) {
 
 module.exports = {
 	transaction,
+	rethrowHandled,
 	addRoleReact,
 	removeRoleReact,
 	removeAllRoleReacts,

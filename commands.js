@@ -43,6 +43,7 @@ const Discord = require('discord.js');
 const SELECTED_MESSAGE_CACHE = require('memory-cache');
 
 const database = require('./database');
+const { rethrowHandled } = database;
 const info = require('./package.json');
 const logger = require('./logger');
 const {
@@ -323,16 +324,18 @@ async function cmdRoleAdd(interaction) {
 			await database.addRoleReact(db_data, trx);
 		} catch (err) {
 			logger.error(`Database failed to create ${stringify(db_data)}`, err);
-			return ephemReply(interaction, 'Something went wrong');
+			await ephemReply(interaction, 'Something went wrong');
+			rethrowHandled(err);
 		}
 
 		try {
 			await message.react(emoji);
 		} catch (err) {
 			logger.warn(`Could not add ${stringify(emoji)} to ${stringify(message)}`, err);
-			return ephemReply(interaction,
+			await ephemReply(interaction,
 				'I could not react to your selected message. Do I have the right permissions?'
 			);
+			rethrowHandled(err);
 		}
 
 		return ephemReply(interaction, `Mapped ${emoji} to ${role} on ${stringify(message)}`);
@@ -372,9 +375,10 @@ async function cmdRoleRemove(interaction) {
 				`Could not remove ${stringify(emoji)} from ${stringify(message)}`,
 				err
 			);
-			return ephemReply(interaction,
+			await ephemReply(interaction,
 				'I could not remove the react. Do I have the right permissions?'
 			);
+			rethrowHandled(err);
 		}
 
 		return ephemReply(interaction,
@@ -404,9 +408,10 @@ async function cmdRoleRemoveAll(interaction) {
 			await message.reactions.removeAll();
 		} catch (err) {
 			logger.error(`Could not remove all reacts from ${stringify(message)}`, err);
-			return ephemReply(interaction,
+			await ephemReply(interaction,
 				'I could not remove the reacts. Do I have the right permissions?'
 			);
+			rethrowHandled(err);
 		}
 
 		return ephemReply(interaction,
