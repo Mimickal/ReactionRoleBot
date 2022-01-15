@@ -1,18 +1,10 @@
 /*******************************************************************************
- * This file is part of ReactionRoleBot, a role-assigning Discord bot.
+ * This file is part of No BS Role Reacts, a role-assigning Discord bot.
  * Copyright (C) 2020 Mimickal (Mia Moretti).
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * No BS Role Reacts is free software under the GNU Affero General Public
+ * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
+ * for more information.
  ******************************************************************************/
 module.exports = {
 	development: {
