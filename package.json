@@ -15,7 +15,7 @@
   "scripts": {
     "dev": "node main.js dev-config.json",
     "knex": "node_modules/knex/bin/cli.js",
-    "register": "node register.js",
+    "register": "node src/register.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

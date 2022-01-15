@@ -44,7 +44,7 @@ const NodeCache = require('node-cache');
 
 const database = require('./database');
 const { rethrowHandled } = database;
-const info = require('./package.json');
+const info = require('../package.json');
 const logger = require('./logger');
 const {
 	asLines,

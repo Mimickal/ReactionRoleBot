@@ -18,8 +18,8 @@ const fs = require('fs');
 
 const Discord = require('discord.js');
 
-const events = require('./events');
-const logger = require('./logger');
+const events = require('./src/events');
+const logger = require('./src/logger');
 
 const CONFIG = JSON.parse(fs.readFileSync(
 	process.argv[2] || '/etc/discord/ReactionRoleBot/config.json'
