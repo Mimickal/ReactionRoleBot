@@ -14,7 +14,7 @@
   },
   "scripts": {
     "dev": "node main.js dev-config.json",
-    "knex": "node_modules/knex/bin/cli.js",
+    "knex": "npx knex --knexfile src/knexfile.js",
     "register": "node src/register.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
