@@ -166,14 +166,8 @@ async function onReactionAdd(reaction, react_user) {
 		role_id: role_id,
 	});
 	try {
-		// Do assignment in one request so we don't hit rate limit so quickly.
-		let new_roles = member.roles.cache.clone();
-		const removed = mutex_roles
-			.map(mutex_id => new_roles.delete(mutex_id))
-			.find(was_deleted => was_deleted);
-		new_roles = Array.from(new_roles.keys());
-		new_roles.push(role_id);
-		await member.roles.set(new_roles, `Role bot assignment${removed && ' (mutex)'}`);
+		await member.roles.remove(mutex_roles, 'Role bot removal (mutex)');
+		await member.roles.add(role_id, 'Role bot assignment');
 	} catch (err) {
 		logger.warn(`Failed to update roles on ${stringify(react_user)}`, err);
 	}
