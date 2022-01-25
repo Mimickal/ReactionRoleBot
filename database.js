@@ -173,9 +173,9 @@ function getRoleReact(args) {
  * Returns the emoji->role mapping for the given message as a Map object, or
  * null if the given message has no react roles set up.
  */
-function getRoleReactMap(message_id) {
+function getRoleReactMap(message_id, trx) {
 	_assertDiscordId(message_id);
-	return knex(REACTS)
+	return (trx ? trx(REACTS) : knex(REACTS))
 		.select(['emoji_id', 'role_id'])
 		.where('message_id', message_id)
 		.then(rows => rows.length > 0

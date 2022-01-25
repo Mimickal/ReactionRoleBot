@@ -40,7 +40,7 @@ const {
 	codeBlock,
 } = require('discord-command-registry');
 const Discord = require('discord.js');
-const SELECTED_MESSAGE_CACHE = require('memory-cache');
+const NodeCache = require('node-cache');
 
 const database = require('./database');
 const { rethrowHandled } = database;
@@ -49,12 +49,21 @@ const logger = require('./logger');
 const {
 	asLines,
 	emojiToKey,
+	ephemEdit,
 	ephemReply,
 	stringify,
 	unindent,
 } = require('./util');
 
-const ONE_HOUR_IN_MS = 60*60*1000;
+
+const ONE_HOUR_IN_SECONDS = 60*60;
+const CACHE_SETTINGS = {
+	stdTTL: ONE_HOUR_IN_SECONDS,
+	checkperiod: ONE_HOUR_IN_SECONDS,
+	useClones: false,
+}
+const SELECTED_MESSAGE_CACHE = new NodeCache(CACHE_SETTINGS);
+const CLONE_MESSAGE_CACHE = new NodeCache(CACHE_SETTINGS);
 
 const REGISTRY = new SlashCommandRegistry()
 	.addCommand(command => command
@@ -68,6 +77,11 @@ const REGISTRY = new SlashCommandRegistry()
 		.setName('select-message')
 		.setType(ApplicationCommandType.Message)
 		.setHandler(requireAuth(cmdSelect))
+	)
+	.addContextMenuCommand(command => command
+		.setName('select-copy-target')
+		.setType(ApplicationCommandType.Message)
+		.setHandler(requireAuth(cmdSelectCopy))
 	)
 	.addCommand(command => command
 		.setName('select-message-mobile')
@@ -83,6 +97,32 @@ const REGISTRY = new SlashCommandRegistry()
 		.setName('selected')
 		.setDescription('Shows currently selected message')
 		.setHandler(requireAuth(cmdSelected))
+	)
+	.addCommand(command => command
+		.setName('copy')
+		.setDescription('Copy react-role mappings to another message')
+		.addSubcommand(subcommand => subcommand
+			.setName('select-target-mobile')
+			.setDescription('Workaround for selecting copy target message on mobile')
+			.setHandler(requireAuth(cmdSelectCopyMobile))
+			.addStringOption(option => option
+				.setName('message-url')
+				.setDescription('The URL for the clone target message to select')
+				.setRequired(true)
+			)
+		)
+		.addSubcommand(subcommand => subcommand
+			.setName('selected-target')
+			.setDescription('Shows currently selected copy target message')
+			.setHandler(requireAuth(cmdSelectedCopy))
+		)
+		.addSubcommand(subcommand => subcommand
+			.setName('execute')
+			.setDescription(
+				'Copy role-react mappings from selected message to target message'
+			)
+			.setHandler(requireAuth(cmdCopyMappings))
+		)
 	)
 	.addCommand(command => command
 		.setName('role')
@@ -231,14 +271,28 @@ async function cmdInfo(interaction) {
  * Saves a user's selected message for subsequent actions.
  */
 async function cmdSelect(interaction) {
+	const message = _selectCommon(interaction, SELECTED_MESSAGE_CACHE);
+	return ephemReply(interaction, `Selected message: ${message.url}`);
+}
+
+/**
+ * Saves a user's selected clone target message for subsequent clone.
+ */
+async function cmdSelectCopy(interaction) {
+	const message = _selectCommon(interaction, CLONE_MESSAGE_CACHE);
+	return ephemReply(interaction, `Selected copy target: ${message.url}`);
+}
+
+// Common logic between cmdSelect and cmdSelectClone
+function _selectCommon(interaction, cache) {
 	const user    = interaction.user;
 	const message = interaction.options.getMessage('message', true);
 
 	// Always clear selected message first, just to be safe and consistent.
-	SELECTED_MESSAGE_CACHE.del(user.id);
-	SELECTED_MESSAGE_CACHE.put(user.id, message, ONE_HOUR_IN_MS);
+	cache.del(user.id);
+	cache.set(user.id, message);
 
-	return ephemReply(interaction, `Selected message: ${message.url}`);
+	return message;
 }
 
 /**
@@ -246,8 +300,27 @@ async function cmdSelect(interaction) {
  * menus, since Discord mobile does not currently support context menus.
  */
 async function cmdSelectMobile(interaction) {
+	const url = await _selectCloneCommon(interaction, SELECTED_MESSAGE_CACHE);
+	if (url) {
+		return ephemReply(interaction, `Selected message: ${url}`);
+	}
+}
+
+/**
+ * An alternative way to select clone target messages using slash commands
+ * instead of context menus.
+ */
+async function cmdSelectCopyMobile(interaction) {
+	const url = await _selectCloneCommon(interaction, CLONE_MESSAGE_CACHE);
+	if (url) {
+		return ephemReply(interaction, `Selected copy target: ${url}`);
+	}
+}
+
+// Common logic between cmdSelectMobile and cmdSelectCloneMobile
+async function _selectCloneCommon(interaction, cache) {
 	function reportInvalid(err) {
-		logger.error('Failed to select message by URL', err);
+		logger.warn('Failed to select message by URL', err);
 		return ephemReply(interaction, 'Invalid message link!');
 	}
 
@@ -269,10 +342,10 @@ async function cmdSelectMobile(interaction) {
 		return reportInvalid(err);
 	}
 
-	SELECTED_MESSAGE_CACHE.del(interaction.user.id);
-	SELECTED_MESSAGE_CACHE.put(interaction.user.id, message, ONE_HOUR_IN_MS);
+	cache.del(interaction.user.id);
+	cache.set(interaction.user.id, message);
 
-	return ephemReply(interaction, `Selected message: ${url}`);
+	return url;
 }
 
 /**
@@ -283,6 +356,17 @@ async function cmdSelected(interaction) {
 	return ephemReply(interaction, message
 		? `Currently selected: ${message.url}`
 		: 'No message currently selected'
+	);
+}
+
+/**
+ * Shows a user their currently selected copy target message.
+ */
+async function cmdSelectedCopy(interaction) {
+	const message = CLONE_MESSAGE_CACHE.get(interaction.user.id);
+	return ephemReply(interaction, message
+		? `Current copy target: ${message.url}`
+		: 'No copy target message currently selected'
 	);
 }
 
@@ -567,6 +651,78 @@ async function cmdReset(interaction) {
 	}
 
 	return ephemReply(interaction, 'Deleted all configuration for this guild!');
+}
+
+/**
+ * Copies role-react mappings from the selected message to the copy target
+ * message. This requires both a message and a copy target to be selected.
+ */
+async function cmdCopyMappings(interaction) {
+	let msg_from = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
+	let msg_copy = CLONE_MESSAGE_CACHE.get(interaction.user.id);
+
+	if (!msg_from) {
+		return ephemReply(interaction,
+			'No message selected! Select a message first.'
+		);
+	}
+
+	if (!msg_copy) {
+		return ephemReply(interaction,
+			'No copy target selected! Select a copy target message first.'
+		);
+	}
+
+	msg_from = await msg_from.fetch();
+	msg_copy = await msg_copy.fetch();
+
+	// Prevent modifying a server from outside a server
+	const guild = interaction.guild;
+	if (guild !== msg_from.guild || guild !== msg_copy.guild) {
+		return ephemReply(interaction, unindent(`
+			Source and target messages need to be in the same Server this
+			command was issued from!
+		`));
+	}
+
+	// Need to reply to keep the interaction token alive while we copy
+	await ephemReply(interaction, 'Copying, this may take a moment...');
+
+	return database.transaction(async trx => {
+		const mapping = await database.getRoleReactMap(msg_from.id, trx);
+		for await (const [emoji_id, role_id] of mapping.entries()) {
+			try {
+				await database.addRoleReact({
+					guild_id:   guild.id,
+					message_id: msg_copy.id,
+					emoji_id:   emoji_id,
+					role_id:    role_id,
+				}, trx);
+			} catch (err) {
+				logger.error('Failed to copy roles', err);
+				await ephemEdit(interaction, 'Something went wrong. Try again?');
+				rethrowHandled(err);
+			}
+
+			try {
+				await msg_copy.react(emoji_id);
+			} catch (err) {
+				logger.warn(`Cannot copy roles to ${msg_copy.url}`);
+				await ephemEdit(interaction, unindent(`
+					Could not add reacts to the target message. Do I have the
+					right permissions?
+				`));
+				rethrowHandled(err);
+			}
+		}
+
+		return ephemEdit(interaction,
+			'Copied react-role mappings.\n' +
+			`Source: ${msg_from.url}\n` +
+			`Target: ${msg_copy.url}\n` +
+			'You can delete the original message now.'
+		);
+	});
 }
 
 module.exports = REGISTRY;
