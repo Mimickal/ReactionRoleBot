@@ -1,4 +1,9 @@
 # Overview
+
+<a href="LICENSE.md"><img align="right" alt="AGPL-3.0 Logo"
+src="https://www.gnu.org/graphics/agplv3-155x51.png">
+</a>
+
 A Discord bot that can assign roles based on message reactions.<br/>
 [You can invite my live instance of the bot to your server with this link](
 https://discord.com/oauth2/authorize?client_id=692585944934514738&scope=bot&permissions=335881280
@@ -180,3 +185,11 @@ npm run knex migrate:latest
 Create a file containing your bot token in plain text.
 
 Run this to start the bot: `node main.js path/to/your/config`
+
+## License
+Copyright 2020 [Mimickal](https://github.com/Mimickal)
+
+This code is licensed under the
+[AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0-standalone.html) license.
+
+Basically, any modifications to this code must be made open source.
