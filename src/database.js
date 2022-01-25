@@ -76,7 +76,7 @@ function _assertDiscordId(value) {
  * block.
  *
  * We don't have a great way to differentiate between database Errors and
- * Discord Errors based on their prototype. The oly way is to wrap each method
+ * Discord Errors based on their prototype. The only way is to wrap each method
  * in their own try-catch, so that makes Knex' catch-all rejection behavior
  * problematic. This is our solution.
  */
