@@ -169,7 +169,7 @@ async function onReactionAdd(reaction, react_user) {
 		await member.roles.remove(mutex_roles, 'Role bot removal (mutex)');
 		await member.roles.add(role_id, 'Role bot assignment');
 	} catch (err) {
-		logger.info(`Failed to update roles on ${stringify(user)}`, err);
+		logger.warn(`Failed to update roles on ${stringify(react_user)}`, err);
 	}
 
 	// Remove associated mutually exclusive emoji reactions
@@ -240,10 +240,46 @@ async function onReactionRemove(reaction, react_user) {
 
 /**
  * Event handler for when the bot is logged in.
- * Just logs the bot user we logged in as.
+ *
+ * Logs the bot user we logged in as.
+ *
+ * Pre-caches messages we have react role mappings on. This prevents an issue
+ * where the bot sometimes fails to pick up reacts when it first restarts.
  */
-function onReady(client) {
+async function onReady(client) {
 	logger.info(`Logged in as ${client.user.tag} (${client.user.id})`);
+	logger.info('Precaching messages...');
+
+	// Despite message IDs being unique, we can only fetch a message by ID
+	// through a channel object, so we need to iterate over all channels and
+	// search each one for the messages we expect.
+	await Promise.all(client.guilds.cache.map(async guild => {
+		const guild_message_ids = await database.getRoleReactMessages(guild.id);
+		let errors = {}; // Allows us to aggregate and report errors
+
+		await Promise.all(guild.channels.cache.map(async channel => {
+			await Promise.all(guild_message_ids.map(async id => {
+				try {
+					await channel.messages?.fetch(id);
+				} catch (err) {
+					if (err.message.includes('Unknown Message')) {
+						return; // Expected when message isn't in this channel
+					} else {
+						errors[err.message] ??= 0;
+						errors[err.message]++;
+					}
+				}
+			}));
+		}));
+
+		Object.entries(errors)
+			.filter(([msg, count]) => count)
+			.forEach(([msg, count]) => {
+				logger.warn(`Pre-cache ${stringify(guild)} - ${msg} x${count}`)
+			});
+	}));
+
+	logger.info('Finished pre-cache');
 }
 
 module.exports = {
