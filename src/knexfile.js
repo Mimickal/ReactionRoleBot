@@ -6,12 +6,14 @@
  * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
  * for more information.
  ******************************************************************************/
+const path = require('path');
+
 module.exports = {
 	development: {
 		client: 'sqlite3',
 		useNullAsDefault: true,
 		connection: {
-			filename: './dev.sqlite3'
+			filename: path.join(__dirname, '..', 'dev.sqlite3'),
 		},
 		// Helps us catch hanging transactions in dev by locking up the database
 		// if we forget to commit anything.
