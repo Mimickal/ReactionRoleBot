@@ -480,7 +480,7 @@ async function cmdRoleRemoveAll(interaction) {
 	return database.transaction(async trx => {
 		let removed;
 		try {
-		removed = await database.removeAllRoleReacts(message.id);
+			removed = await database.removeAllRoleReacts(message.id, trx);
 			await message.reactions.removeAll();
 		} catch (err) {
 			logger.error(`Could not remove all reacts from ${stringify(message)}`, err);
