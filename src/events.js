@@ -245,6 +245,7 @@ async function onReady(client) {
 	// Despite message IDs being unique, we can only fetch a message by ID
 	// through a channel object, so we need to iterate over all channels and
 	// search each one for the messages we expect.
+	let numCached = 0;
 	await Promise.all(client.guilds.cache.map(async guild => {
 		const guild_message_ids = await database.getRoleReactMessages(guild.id);
 		let errors = {}; // Allows us to aggregate and report errors
@@ -252,7 +253,9 @@ async function onReady(client) {
 		await Promise.all(guild.channels.cache.map(async channel => {
 			await Promise.all(guild_message_ids.map(async id => {
 				try {
-					await channel.messages?.fetch(id);
+					if (await channel.messages?.fetch(id)) {
+						numCached++;
+					}
 				} catch (err) {
 					if (err.message.includes('Unknown Message')) {
 						return; // Expected when message isn't in this channel
@@ -271,7 +274,7 @@ async function onReady(client) {
 			});
 	}));
 
-	logger.info('Finished pre-cache');
+	logger.info(`Finished pre-cache (${numCached} messages)`);
 }
 
 module.exports = {
