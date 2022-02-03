@@ -68,6 +68,15 @@ function _assertDiscordId(value) {
 }
 
 /**
+ * Simple assert to ensure value is a valid Emoji string or Discord ID.
+ */
+function _assertEmojiKey(value) {
+	if (!isDiscordId(value) && !isEmojiStr(value)) {
+		throw Error(`Invalid Emoji key: ${value}`);
+	}
+}
+
+/**
  * A pass-through for knex.transaction(...) that suppresses errors we have
  * already handled.
  *
@@ -127,12 +136,33 @@ function addRoleReact(args, trx) {
 
 /**
  * Removes an emoji->role mapping for the given message.
+ * At least one of emoji_id or role_id must be provided. Mappings will be
+ * removed based on the data provided (e.g. if an emoji is provided, all
+ * mappings for that emoji are removed).
  */
 function removeRoleReact(args, trx) {
-	const fields = _pickAndAssertFields(args, {
-		message_id: DISCORD_ASSERT,
-		emoji_id:   EMOJI_ASSERT,
-	});
+	const fields = {};
+
+	const message_id = args.message_id;
+	const emoji_id   = args.emoji_id;
+	const role_id    = args.role_id;
+
+	_assertDiscordId(message_id);
+	fields.message_id = message_id;
+
+	if (!emoji_id && !role_id) {
+		throw new Error('Need one of emoji_id or role_id');
+	}
+
+	if (emoji_id) {
+		_assertEmojiKey(emoji_id);
+		fields.emoji_id = emoji_id;
+	}
+
+	if (role_id) {
+		_assertDiscordId(role_id);
+		fields.role_id = role_id;
+	}
 
 	return (trx ? trx(REACTS) : knex(REACTS)).where(fields).del();
 }
