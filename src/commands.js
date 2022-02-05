@@ -695,6 +695,10 @@ async function cmdCopyMappings(interaction) {
 		);
 	}
 
+	if (msg_from === msg_copy) {
+		return ephemReply(interaction, 'Cannot copy a message to itself!');
+	}
+
 	msg_from = await msg_from.fetch();
 	msg_copy = await msg_copy.fetch();
 
@@ -738,11 +742,12 @@ async function cmdCopyMappings(interaction) {
 			}
 		}
 
-		return ephemEdit(interaction,
-			'Copied react-role mappings.\n' +
-			`Source: ${msg_from.url}\n` +
-			`Target: ${msg_copy.url}\n` +
-			'You can delete the original message now.'
+		return ephemEdit(interaction, mapping.size === 0
+			? 'Selected message has no mappings!'
+			: 'Copied react-role mappings.\n' +
+				`Source: ${msg_from.url}\n` +
+				`Target: ${msg_copy.url}\n` +
+				'You can delete the original message now.'
 		);
 	});
 }
