@@ -30,6 +30,7 @@ const {
 	SlashCommandRegistry,
 	bold,
 	codeBlock,
+	roleMention,
 } = require('discord-command-registry');
 const Discord = require('discord.js');
 const NodeCache = require('node-cache');
@@ -142,7 +143,12 @@ const REGISTRY = new SlashCommandRegistry()
 			.addStringOption(option => option
 				.setName('emoji')
 				.setDescription('The emoji mapping to remove')
-				.setRequired(true)
+				.setRequired(false)
+			)
+			.addRoleOption(option => option
+				.setName('role')
+				.setDescription('The role mapping to remove')
+				.setRequired(false)
 			)
 		)
 		.addSubcommand(subcommand => subcommand
@@ -423,51 +429,74 @@ async function cmdRoleAdd(interaction) {
  * Removes an emoji mapping from the currently selected message.
  */
 async function cmdRoleRemove(interaction) {
-	const emoji   = Options.getEmoji(interaction, 'emoji', true);
+	const emoji   = Options.getEmoji(interaction, 'emoji', false);
+	const role    = interaction.options.getRole('role', false);
 	let   message = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
 
 	if (!message) {
 		return ephemReply(interaction, 'No message selected! Select a message first.');
 	}
 
-	if (!emoji) {
-		return ephemReply(interaction, 'Not a valid emoji!');
+	if (!emoji && !role) {
+		return ephemReply(interaction, 'You must specify an emoji or a role (or both)!');
 	}
 
 	message = await message.fetch();
 
 	return database.transaction(async trx => {
-		let removed;
-		try {
-			const emoji_id = emojiToKey(emoji);
+		// Need to reply to keep the interaction token alive while we delete
+		await ephemReply(interaction, 'Removing, this may take a moment...');
 
-			// Intentionally NOT removing this role from users who currently have it
-			await database.removeRoleReact({
-				message_id: message.id,
-				emoji_id: emoji_id,
-			}, trx);
-			removed = await message.reactions.cache.get(emoji_id)?.remove();
+		let map_before;
+		const db_data = {
+			message_id: message.id,
+			emoji_id:   emoji ? emojiToKey(emoji) : undefined,
+			role_id:    role?.id,
+		};
+		try {
+			map_before = await database.getRoleReactMap(message.id, trx);
+			// Intentionally NOT removing roles from users who currently have them
+			await database.removeRoleReact(db_data, trx);
 		} catch (err) {
-			logger.error(
-				`Could not remove ${stringify(emoji)} from ${stringify(message)}`,
-				err
-			);
-			await ephemReply(interaction,
-				'I could not remove the react. Do I have the right permissions?'
+			logger.error(`Database failed to remove mappings ${stringify(db_data)}`, err);
+			await ephemEdit(interaction, 'Something went wrong. Try again?');
+			rethrowHandled(err);
+		}
+
+		let map_after;
+		try {
+			map_after = await database.getRoleReactMap(message.id, trx);
+			await Promise.all(message.reactions.cache
+				.filter((_, msg_emoji) => !map_after.has(msg_emoji))
+				.map(react => react.remove()));
+		} catch (err) {
+			logger.error(`Could not remove reacts from ${stringify(message)}`, err);
+			await ephemEdit(interaction,
+				'I could not remove the react(s). Do I have the right permissions?'
 			);
 			rethrowHandled(err);
 		}
 
-		return ephemReply(interaction,
-			removed
-				? `Removed ${emoji} from ${stringify(message)}`
-				: `Selected message does not have ${emoji} reaction! ${message.url}`
+		entries(map_after).forEach(
+			([emoji_key, role_id]) => map_before.delete(emoji_key, role_id)
+		);
+		const removed_pairs = entries(map_before);
+
+		return ephemEdit(interaction, removed_pairs
+			? 'Selected message has no mappings for the given emoji and/or role!'
+			: `Removed mappings:\n${
+				removed_pairs.map(([emoji_id, role_id]) => {
+					const emoji_str = interaction.client.emojis.resolve(emoji_id) ?? emoji_id;
+					return `${emoji_str} -> ${roleMention(role_id)}`
+				}).join('\n')
+			}\nFrom ${stringify(message)}`
 		);
 	});
 }
 
 /**
  * Removes all emoji mappings from the currently selected message.
+ * This remains a separate function to avoid accidentally nuking a message.
  */
 async function cmdRoleRemoveAll(interaction) {
 	let message = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
