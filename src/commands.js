@@ -41,6 +41,7 @@ const logger = require('./logger');
 const {
 	asLines,
 	emojiToKey,
+	entries,
 	ephemEdit,
 	ephemReply,
 	stringify,
@@ -682,7 +683,7 @@ async function cmdCopyMappings(interaction) {
 
 	return database.transaction(async trx => {
 		const mapping = await database.getRoleReactMap(msg_from.id, trx);
-		for await (const [emoji_id, role_id] of mapping.entries()) {
+		for await (const [emoji_id, role_id] of entries(mapping)) {
 			try {
 				await database.addRoleReact({
 					guild_id:   guild.id,

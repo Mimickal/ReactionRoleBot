@@ -9,6 +9,7 @@
 const knexfile = require('./knexfile');
 const knex = require('knex')(knexfile[process.env.NODE_ENV || 'development']);
 const lodash = require('lodash');
+const MultiMap = require('multimap');
 
 const logger = require('./logger');
 const {
@@ -192,18 +193,16 @@ function getRoleReact(args) {
 }
 
 /**
- * Returns the emoji->role mapping for the given message as a Map object, or
- * null if the given message has no react roles set up.
+ * Returns the emoji->role mapping for the given message as a MultiMap.
  */
 function getRoleReactMap(message_id, trx) {
 	_assertDiscordId(message_id);
 	return (trx ? trx(REACTS) : knex(REACTS))
 		.select(['emoji_id', 'role_id'])
 		.where('message_id', message_id)
-		.then(rows => rows.length > 0
-			? new Map(rows.map(({ emoji_id, role_id }) => [emoji_id, role_id]))
-			: null
-		);
+		.then(rows => new MultiMap(
+			rows.map(({emoji_id, role_id}) => [emoji_id, role_id])
+		));
 }
 
 /**
