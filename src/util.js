@@ -69,7 +69,7 @@ function emojiToKey(emoji) {
 }
 
 /**
- * Flattens a MultiMap<emoji_key, role_id[]> to an array of emoji-role pairs.
+ * Flattens a MultiMap<emoji_key, role_id> to an array of emoji-role pairs.
  */
  function entries(mmap) {
 	return Array.from(mmap.keys()).reduce((arr, emoji_key) => {

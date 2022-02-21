@@ -396,10 +396,29 @@ async function cmdRoleAdd(interaction) {
 	}
 
 	return database.transaction(async trx => {
+		const emoji_key = emojiToKey(emoji);
+
+		const mapping = await database.getRoleReactMap(message.id, trx);
+		const mutex_roles = await database.getMutexRoles({
+			guild_id: interaction.guild.id,
+			role_id: role.id,
+		}, trx);
+		if (mutex_roles.find(mrole_id => mapping.has(emoji_key, mrole_id))) {
+			const conflicting = mutex_roles.filter(
+				mrole_id => mapping.has(emoji_key, mrole_id)
+			);
+			return await ephemReply(interaction, unindent(
+				`Cannot add emoji-role mapping because it conflicts with
+				mutually exclusive roles mapped to this emoji.\n
+				Conflicting roles:
+				${conflicting.map(mrole_id => roleMention(mrole_id)).join(', ')}`
+			));
+		}
+
 		const db_data = {
 			guild_id: interaction.guild.id,
 			message_id: message.id,
-			emoji_id: emojiToKey(emoji),
+			emoji_id: emoji_key,
 			role_id: role.id,
 		};
 
@@ -407,7 +426,7 @@ async function cmdRoleAdd(interaction) {
 			await database.addRoleReact(db_data, trx);
 		} catch (err) {
 			logger.error(`Database failed to create ${stringify(db_data)}`, err);
-			await ephemReply(interaction, 'Something went wrong');
+			await ephemReply(interaction, 'Something went wrong. Try again?');
 			rethrowHandled(err);
 		}
 

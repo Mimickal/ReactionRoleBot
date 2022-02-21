@@ -354,7 +354,7 @@ function removeMutexRole(args) {
  * for the given guild. If no roles are mutually exclusive, an empty array is
  * returned.
  */
-function getMutexRoles(args) {
+function getMutexRoles(args, trx) {
 	const fields = _pickAndAssertFields(args, {
 		guild_id: DISCORD_ASSERT,
 		role_id:  DISCORD_ASSERT,
@@ -362,12 +362,13 @@ function getMutexRoles(args) {
 
 	// Roles could be added in either order, so fetch with both orders and
 	// combine the results.
+	const builder = trx ? trx : knex;
 	return Promise.all([
-		knex(MUTEX).select('role_id_1').where({
+		builder(MUTEX).select('role_id_1').where({
 			guild_id:  fields.guild_id,
 			role_id_2: fields.role_id
 		}),
-		knex(MUTEX).select('role_id_2').where({
+		builder(MUTEX).select('role_id_2').where({
 			guild_id:  fields.guild_id,
 			role_id_1: fields.role_id
 		})
