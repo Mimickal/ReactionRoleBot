@@ -127,7 +127,7 @@ function addRoleReact(args, trx) {
 		.catch(err => {
 			if (err.message.includes('UNIQUE constraint failed')) {
 				return (trx ? trx(REACTS) : knex(REACTS))
-					.where(lodash.pick(fields, ['message_id', 'emoji_id']))
+					.where(lodash.pick(fields, ['message_id', 'emoji_id', 'role_id']))
 					.update({ role_id: fields.role_id });
 			} else {
 				throw err;
