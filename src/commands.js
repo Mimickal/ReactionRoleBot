@@ -439,7 +439,14 @@ async function cmdRoleAdd(interaction) {
 			rethrowHandled(err);
 		}
 
-		return ephemReply(interaction, `Mapped ${emoji} to ${role} on ${stringify(message)}`);
+		let response = `Mapped ${emoji} to ${role} on ${stringify(message)}`;
+		const also_mapped = entries(mapping)
+			.filter(([eid, rid]) => eid !== emoji_key && rid === role.id)
+			.map(([eid, _]) => message.reactions.resolve(eid).emoji);
+		if (also_mapped.length > 0) {
+			response += `\nNote: also mapped to ${also_mapped.join(' ')}`;
+		}
+		return ephemReply(interaction, response);
 	});
 }
 
