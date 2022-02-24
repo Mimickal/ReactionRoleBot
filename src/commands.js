@@ -407,12 +407,11 @@ async function cmdRoleAdd(interaction) {
 			const conflicting = mutex_roles.filter(
 				mrole_id => mapping.has(emoji_key, mrole_id)
 			);
-			return await ephemReply(interaction, unindent(
-				`Cannot add emoji-role mapping because it conflicts with
-				mutually exclusive roles mapped to this emoji.\n
-				Conflicting roles:
-				${conflicting.map(mrole_id => roleMention(mrole_id)).join(', ')}`
-			));
+			return await ephemReply(interaction, unindent(`
+				Cannot add emoji-role mapping because it conflicts with mutually
+				exclusive roles mapped to this emoji! Conflicting roles:
+				${conflicting.map(mrole_id => roleMention(mrole_id)).join(', ')}
+			`));
 		}
 
 		const db_data = {
@@ -501,7 +500,7 @@ async function cmdRoleRemove(interaction) {
 		);
 		const removed_pairs = entries(map_before);
 
-		return ephemEdit(interaction, removed_pairs
+		return ephemEdit(interaction, removed_pairs.length === 0
 			? 'Selected message has no mappings for the given emoji and/or role!'
 			: `Removed mappings:\n${
 				removed_pairs.map(([emoji_id, role_id]) => {
