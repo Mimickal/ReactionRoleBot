@@ -51,7 +51,7 @@ and use Discord's fancy context menu to select it. This is tracked per-user, so
 multiple users can interact with the bot at the same time.
 
 Due to current Discord limitations, context menus are not available on mobile
-devices (sorry). See below for alternative.
+devices (sorry). See below for an alternative.
 
 ![](docs/select.png)
 
@@ -111,7 +111,7 @@ You can use `/reset-everything` to remove *all* configuration the bot has for
 the guild the command was sent from. The bot does this automatically when it is
 kicked from a guild.
 
-This does not clear any server-side logs for to the guild.
+This does not clear any server-side logs for the guild.
 
 ## Printing Bot Info
 You can use `/info` to print the bot's description, version number, link to the
