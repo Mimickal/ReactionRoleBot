@@ -184,10 +184,11 @@ async function onReactionAdd(reaction, react_user) {
 
 /**
  * Event handler for when a reaction is removed from a message.
- * Checks if the message has any reaction roles configured. If so, removes that
- * role from the user whose reaction was removed. Also re-adds the bot's
- * reaction if it is removed while a react-role is active.
+ * Checks if the message has any reaction roles configured for the given emoji.
+ * If so, removes that role (or roles) from the user whose reaction was removed.
+ * Also re-adds the bot's reaction if it is removed while a react-role is active.
  *
+ * NOTE:
  * This is only fired when a single reaction is removed, either by clicking on
  * an emoji or through the message's "reactions" context menu. It is NOT fired
  * when a bot removes all reactions (Discord uses a seprate event for that).
@@ -200,19 +201,20 @@ async function onReactionAdd(reaction, react_user) {
 async function onReactionRemove(reaction, react_user) {
 	logger.debug(`Removed ${detail(reaction)}`);
 
-	// TODO How do we handle two emojis mapped to the same role?
-	// Do we only remove the role if the user doesn't have any of the mapped
-	// reactions? Or do we remove when any of the emojis are un-reacted?
+	// TODO Maybe be a little smarter about how we remove roles when multiple
+	// emojis map to that role. Currently we remove the roll when a single emoji
+	// mapped to it is removed. Maybe we should wait until all emojis mapped to
+	// it are removed?
 
 	const emoji = reaction.emoji;
 
-	const role_id = await database.getRoleReact({
+	const role_ids = await database.getRoleReacts({
 		message_id: reaction.message.id,
 		emoji_id: emojiToKey(emoji),
 	});
 
 	// Ignore reactions on non-role-react posts
-	if (!role_id) {
+	if (role_ids.length === 0) {
 		return;
 	}
 
@@ -223,11 +225,11 @@ async function onReactionRemove(reaction, react_user) {
 
 	try {
 		const member = await reaction.message.guild.members.fetch(react_user.id);
-		await member.roles.remove(role_id, 'Role bot removal');
-		logger.info(`Removed Role ${role_id} from ${stringify(react_user)}`);
+		await member.roles.remove(role_ids, 'Role bot removal');
+		logger.info(`Removed Roles ${stringify(role_ids)} from ${stringify(react_user)}`);
 	} catch (err) {
 		logger.error(
-			`Failed to remove Role ${role_id} from ${stringify(react_user)}`,
+			`Failed to remove Roles ${stringify(role_ids)} from ${stringify(react_user)}`,
 			err
 		);
 	}
