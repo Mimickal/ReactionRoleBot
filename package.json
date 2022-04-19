@@ -10,7 +10,8 @@
     "lodash": "^4.17.20",
     "multimap": "^1.1.0",
     "node-cache": "^5.1.2",
-    "sqlite3": "^5.0.4",
+    "sqlite": "^4.0.25",
+    "sqlite3": "^4.2.0",
     "winston": "^3.3.3"
   },
   "scripts": {
