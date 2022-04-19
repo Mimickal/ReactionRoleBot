@@ -177,19 +177,18 @@ function removeAllRoleReacts(message_id, trx) {
 }
 
 /**
- * Returns the role for the given emoji on the given message, or null if there
- * is no role associated with the emoji on the message.
+ * Returns the roles as an Array for the given emoji on the given message.
  */
-function getRoleReact(args) {
+function getRoleReacts(args) {
 	const fields = _pickAndAssertFields(args, {
 		message_id: DISCORD_ASSERT,
 		emoji_id:   EMOJI_ASSERT,
 	});
 
 	return knex(REACTS)
-		.first('role_id')
+		.select('role_id')
 		.where(fields)
-		.then(result => result ? result.role_id : null);
+		.then(results => results.map(row => row.role_id));
 }
 
 /**
@@ -402,7 +401,7 @@ module.exports = {
 	addRoleReact,
 	removeRoleReact,
 	removeAllRoleReacts,
-	getRoleReact,
+	getRoleReacts,
 	getRoleReactMap,
 	isRoleReactMessage,
 	getRoleReactMessages,

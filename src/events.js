@@ -6,6 +6,7 @@
  * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
  * for more information.
  ******************************************************************************/
+const lodash = require('lodash');
 const Perms = require('discord.js').Permissions.FLAGS;
 
 const commands = require('./commands');
@@ -123,9 +124,9 @@ async function onMessageDelete(message) {
 
 /**
  * Event handler for when a reaction is added to a message.
- * Checks if the message has any reaction roles configured. If so, adds that
- * role to the user who added the reaction. Removes any reaction that doesn't
- * correspond to a role.
+ * Checks if the message has any reaction roles configured for the given emoji.
+ * If so, adds that role (or roles) to the user who added the reaction.
+ * Removes any reaction that doesn't correspond to a role.
  */
 async function onReactionAdd(reaction, react_user) {
 	logger.debug(`Added ${detail(reaction)}`);
@@ -140,26 +141,28 @@ async function onReactionAdd(reaction, react_user) {
 		return;
 	}
 
-	const role_id = await database.getRoleReact({
+	const role_ids = await database.getRoleReacts({
 		message_id: reaction.message.id,
 		emoji_id: emojiToKey(reaction.emoji),
 	});
 
 	// Someone added an emoji that isn't mapped to a role
-	if (!role_id) {
+	if (role_ids.length === 0) {
 		return reaction.remove();
 	}
 
 	const member = await reaction.message.guild.members.fetch(react_user.id);
 
 	// Remove mutually exclusive roles from user
-	const mutex_roles = await database.getMutexRoles({
-		guild_id: reaction.message.guild.id,
-		role_id: role_id,
-	});
+	const mutex_roles = lodash.flatMap(
+		await Promise.all(role_ids.map(role_id => database.getMutexRoles({
+			guild_id: reaction.message.guild.id,
+			role_id: role_id,
+		})))
+	);
 	try {
 		await member.roles.remove(mutex_roles, 'Role bot removal (mutex)');
-		await member.roles.add(role_id, 'Role bot assignment');
+		await member.roles.add(role_ids, 'Role bot assignment');
 	} catch (err) {
 		logger.warn(`Failed to update roles on ${stringify(react_user)}`, err);
 	}
@@ -174,9 +177,9 @@ async function onReactionAdd(reaction, react_user) {
 	}
 
 	// Track assignment number for fun
-	await database.incrementAssignCounter();
+	await database.incrementAssignCounter(role_ids.length);
 
-	logger.info(`Added Role ${role_id} to ${detail(react_user)}`);
+	logger.info(`Added Roles ${stringify(role_ids)} to ${stringify(react_user)}`);
 }
 
 /**

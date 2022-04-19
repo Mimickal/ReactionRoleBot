@@ -166,6 +166,9 @@ function stringify(thing) {
 		const user = thing;
 		return `User ${user.id}`;
 	}
+	else if (Array.isArray(thing)) {
+		return thing.map(t => stringify(t)).join(', ');
+	}
 	else if (typeof thing === 'string' || thing instanceof String) {
 		return thing;
 	}
