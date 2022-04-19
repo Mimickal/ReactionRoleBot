@@ -9,6 +9,7 @@
 const knexfile = require('./knexfile');
 const knex = require('knex')(knexfile[process.env.NODE_ENV || 'development']);
 const lodash = require('lodash');
+const MultiMap = require('multimap');
 
 const logger = require('./logger');
 const {
@@ -68,6 +69,15 @@ function _assertDiscordId(value) {
 }
 
 /**
+ * Simple assert to ensure value is a valid Emoji string or Discord ID.
+ */
+function _assertEmojiKey(value) {
+	if (!isDiscordId(value) && !isEmojiStr(value)) {
+		throw Error(`Invalid Emoji key: ${value}`);
+	}
+}
+
+/**
  * A pass-through for knex.transaction(...) that suppresses errors we have
  * already handled.
  *
@@ -117,7 +127,7 @@ function addRoleReact(args, trx) {
 		.catch(err => {
 			if (err.message.includes('UNIQUE constraint failed')) {
 				return (trx ? trx(REACTS) : knex(REACTS))
-					.where(lodash.pick(fields, ['message_id', 'emoji_id']))
+					.where(lodash.pick(fields, ['message_id', 'emoji_id', 'role_id']))
 					.update({ role_id: fields.role_id });
 			} else {
 				throw err;
@@ -127,12 +137,33 @@ function addRoleReact(args, trx) {
 
 /**
  * Removes an emoji->role mapping for the given message.
+ * At least one of emoji_id or role_id must be provided. Mappings will be
+ * removed based on the data provided (e.g. if an emoji is provided, all
+ * mappings for that emoji are removed).
  */
 function removeRoleReact(args, trx) {
-	const fields = _pickAndAssertFields(args, {
-		message_id: DISCORD_ASSERT,
-		emoji_id:   EMOJI_ASSERT,
-	});
+	const fields = {};
+
+	const message_id = args.message_id;
+	const emoji_id   = args.emoji_id;
+	const role_id    = args.role_id;
+
+	_assertDiscordId(message_id);
+	fields.message_id = message_id;
+
+	if (!emoji_id && !role_id) {
+		throw new Error('Need one of emoji_id or role_id');
+	}
+
+	if (emoji_id) {
+		_assertEmojiKey(emoji_id);
+		fields.emoji_id = emoji_id;
+	}
+
+	if (role_id) {
+		_assertDiscordId(role_id);
+		fields.role_id = role_id;
+	}
 
 	return (trx ? trx(REACTS) : knex(REACTS)).where(fields).del();
 }
@@ -146,34 +177,31 @@ function removeAllRoleReacts(message_id, trx) {
 }
 
 /**
- * Returns the role for the given emoji on the given message, or null if there
- * is no role associated with the emoji on the message.
+ * Returns the roles as an Array for the given emoji on the given message.
  */
-function getRoleReact(args) {
+function getRoleReacts(args) {
 	const fields = _pickAndAssertFields(args, {
 		message_id: DISCORD_ASSERT,
 		emoji_id:   EMOJI_ASSERT,
 	});
 
 	return knex(REACTS)
-		.first('role_id')
+		.select('role_id')
 		.where(fields)
-		.then(result => result ? result.role_id : null);
+		.then(results => results.map(row => row.role_id));
 }
 
 /**
- * Returns the emoji->role mapping for the given message as a Map object, or
- * null if the given message has no react roles set up.
+ * Returns the emoji->role mapping for the given message as a MultiMap.
  */
 function getRoleReactMap(message_id, trx) {
 	_assertDiscordId(message_id);
 	return (trx ? trx(REACTS) : knex(REACTS))
 		.select(['emoji_id', 'role_id'])
 		.where('message_id', message_id)
-		.then(rows => rows.length > 0
-			? new Map(rows.map(({ emoji_id, role_id }) => [emoji_id, role_id]))
-			: null
-		);
+		.then(rows => new MultiMap(
+			rows.map(({emoji_id, role_id}) => [emoji_id, role_id])
+		));
 }
 
 /**
@@ -325,7 +353,7 @@ function removeMutexRole(args) {
  * for the given guild. If no roles are mutually exclusive, an empty array is
  * returned.
  */
-function getMutexRoles(args) {
+function getMutexRoles(args, trx) {
 	const fields = _pickAndAssertFields(args, {
 		guild_id: DISCORD_ASSERT,
 		role_id:  DISCORD_ASSERT,
@@ -333,12 +361,13 @@ function getMutexRoles(args) {
 
 	// Roles could be added in either order, so fetch with both orders and
 	// combine the results.
+	const builder = trx ? trx : knex;
 	return Promise.all([
-		knex(MUTEX).select('role_id_1').where({
+		builder(MUTEX).select('role_id_1').where({
 			guild_id:  fields.guild_id,
 			role_id_2: fields.role_id
 		}),
-		knex(MUTEX).select('role_id_2').where({
+		builder(MUTEX).select('role_id_2').where({
 			guild_id:  fields.guild_id,
 			role_id_1: fields.role_id
 		})
@@ -372,7 +401,7 @@ module.exports = {
 	addRoleReact,
 	removeRoleReact,
 	removeAllRoleReacts,
-	getRoleReact,
+	getRoleReacts,
 	getRoleReactMap,
 	isRoleReactMessage,
 	getRoleReactMessages,

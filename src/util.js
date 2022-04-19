@@ -69,6 +69,16 @@ function emojiToKey(emoji) {
 }
 
 /**
+ * Flattens a MultiMap<emoji_key, role_id> to an array of emoji-role pairs.
+ */
+ function entries(mmap) {
+	return Array.from(mmap.keys()).reduce((arr, emoji_key) => {
+		arr.push(...mmap.get(emoji_key).map(role_id => [emoji_key, role_id]));
+		return arr;
+	}, new Array());
+}
+
+/**
  * Same as {@link ephemReply}, but to edit an existing ephemeral response.
  */
 function ephemEdit(interaction, content) {
@@ -156,6 +166,9 @@ function stringify(thing) {
 		const user = thing;
 		return `User ${user.id}`;
 	}
+	else if (Array.isArray(thing)) {
+		return thing.map(t => stringify(t)).join(', ');
+	}
 	else if (typeof thing === 'string' || thing instanceof String) {
 		return thing;
 	}
@@ -177,6 +190,7 @@ module.exports = {
 	asLines,
 	detail,
 	emojiToKey,
+	entries,
 	ephemEdit,
 	ephemReply,
 	isDiscordId,

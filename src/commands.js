@@ -30,6 +30,7 @@ const {
 	SlashCommandRegistry,
 	bold,
 	codeBlock,
+	roleMention,
 } = require('discord-command-registry');
 const Discord = require('discord.js');
 const NodeCache = require('node-cache');
@@ -41,6 +42,7 @@ const logger = require('./logger');
 const {
 	asLines,
 	emojiToKey,
+	entries,
 	ephemEdit,
 	ephemReply,
 	stringify,
@@ -141,7 +143,12 @@ const REGISTRY = new SlashCommandRegistry()
 			.addStringOption(option => option
 				.setName('emoji')
 				.setDescription('The emoji mapping to remove')
-				.setRequired(true)
+				.setRequired(false)
+			)
+			.addRoleOption(option => option
+				.setName('role')
+				.setDescription('The role mapping to remove')
+				.setRequired(false)
 			)
 		)
 		.addSubcommand(subcommand => subcommand
@@ -389,10 +396,28 @@ async function cmdRoleAdd(interaction) {
 	}
 
 	return database.transaction(async trx => {
+		const emoji_key = emojiToKey(emoji);
+
+		const mapping = await database.getRoleReactMap(message.id, trx);
+		const mutex_roles = await database.getMutexRoles({
+			guild_id: interaction.guild.id,
+			role_id: role.id,
+		}, trx);
+		if (mutex_roles.find(mrole_id => mapping.has(emoji_key, mrole_id))) {
+			const conflicting = mutex_roles.filter(
+				mrole_id => mapping.has(emoji_key, mrole_id)
+			);
+			return await ephemReply(interaction, unindent(`
+				Cannot add emoji-role mapping because it conflicts with mutually
+				exclusive roles mapped to this emoji! Conflicting roles:
+				${conflicting.map(mrole_id => roleMention(mrole_id)).join(', ')}
+			`));
+		}
+
 		const db_data = {
 			guild_id: interaction.guild.id,
 			message_id: message.id,
-			emoji_id: emojiToKey(emoji),
+			emoji_id: emoji_key,
 			role_id: role.id,
 		};
 
@@ -400,7 +425,7 @@ async function cmdRoleAdd(interaction) {
 			await database.addRoleReact(db_data, trx);
 		} catch (err) {
 			logger.error(`Database failed to create ${stringify(db_data)}`, err);
-			await ephemReply(interaction, 'Something went wrong');
+			await ephemReply(interaction, 'Something went wrong. Try again?');
 			rethrowHandled(err);
 		}
 
@@ -414,7 +439,14 @@ async function cmdRoleAdd(interaction) {
 			rethrowHandled(err);
 		}
 
-		return ephemReply(interaction, `Mapped ${emoji} to ${role} on ${stringify(message)}`);
+		let response = `Mapped ${emoji} to ${role} on ${stringify(message)}`;
+		const also_mapped = entries(mapping)
+			.filter(([eid, rid]) => eid !== emoji_key && rid === role.id)
+			.map(([eid, _]) => message.reactions.resolve(eid).emoji);
+		if (also_mapped.length > 0) {
+			response += `\nNote: also mapped to ${also_mapped.join(' ')}`;
+		}
+		return ephemReply(interaction, response);
 	});
 }
 
@@ -422,51 +454,74 @@ async function cmdRoleAdd(interaction) {
  * Removes an emoji mapping from the currently selected message.
  */
 async function cmdRoleRemove(interaction) {
-	const emoji   = Options.getEmoji(interaction, 'emoji', true);
+	const emoji   = Options.getEmoji(interaction, 'emoji', false);
+	const role    = interaction.options.getRole('role', false);
 	let   message = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
 
 	if (!message) {
 		return ephemReply(interaction, 'No message selected! Select a message first.');
 	}
 
-	if (!emoji) {
-		return ephemReply(interaction, 'Not a valid emoji!');
+	if (!emoji && !role) {
+		return ephemReply(interaction, 'You must specify an emoji or a role (or both)!');
 	}
 
 	message = await message.fetch();
 
 	return database.transaction(async trx => {
-		let removed;
-		try {
-			const emoji_id = emojiToKey(emoji);
+		// Need to reply to keep the interaction token alive while we delete
+		await ephemReply(interaction, 'Removing, this may take a moment...');
 
-			// Intentionally NOT removing this role from users who currently have it
-			await database.removeRoleReact({
-				message_id: message.id,
-				emoji_id: emoji_id,
-			}, trx);
-			removed = await message.reactions.cache.get(emoji_id)?.remove();
+		let map_before;
+		const db_data = {
+			message_id: message.id,
+			emoji_id:   emoji ? emojiToKey(emoji) : undefined,
+			role_id:    role?.id,
+		};
+		try {
+			map_before = await database.getRoleReactMap(message.id, trx);
+			// Intentionally NOT removing roles from users who currently have them
+			await database.removeRoleReact(db_data, trx);
 		} catch (err) {
-			logger.error(
-				`Could not remove ${stringify(emoji)} from ${stringify(message)}`,
-				err
-			);
-			await ephemReply(interaction,
-				'I could not remove the react. Do I have the right permissions?'
+			logger.error(`Database failed to remove mappings ${stringify(db_data)}`, err);
+			await ephemEdit(interaction, 'Something went wrong. Try again?');
+			rethrowHandled(err);
+		}
+
+		let map_after;
+		try {
+			map_after = await database.getRoleReactMap(message.id, trx);
+			await Promise.all(message.reactions.cache
+				.filter((_, msg_emoji) => !map_after.has(msg_emoji))
+				.map(react => react.remove()));
+		} catch (err) {
+			logger.error(`Could not remove reacts from ${stringify(message)}`, err);
+			await ephemEdit(interaction,
+				'I could not remove the react(s). Do I have the right permissions?'
 			);
 			rethrowHandled(err);
 		}
 
-		return ephemReply(interaction,
-			removed
-				? `Removed ${emoji} from ${stringify(message)}`
-				: `Selected message does not have ${emoji} reaction! ${message.url}`
+		entries(map_after).forEach(
+			([emoji_key, role_id]) => map_before.delete(emoji_key, role_id)
+		);
+		const removed_pairs = entries(map_before);
+
+		return ephemEdit(interaction, removed_pairs.length === 0
+			? 'Selected message has no mappings for the given emoji and/or role!'
+			: `Removed mappings:\n${
+				removed_pairs.map(([emoji_id, role_id]) => {
+					const emoji_str = interaction.client.emojis.resolve(emoji_id) ?? emoji_id;
+					return `${emoji_str} -> ${roleMention(role_id)}`
+				}).join('\n')
+			}\nFrom ${stringify(message)}`
 		);
 	});
 }
 
 /**
  * Removes all emoji mappings from the currently selected message.
+ * This remains a separate function to avoid accidentally nuking a message.
  */
 async function cmdRoleRemoveAll(interaction) {
 	let message = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
@@ -480,7 +535,7 @@ async function cmdRoleRemoveAll(interaction) {
 	return database.transaction(async trx => {
 		let removed;
 		try {
-		removed = await database.removeAllRoleReacts(message.id);
+			removed = await database.removeAllRoleReacts(message.id, trx);
 			await message.reactions.removeAll();
 		} catch (err) {
 			logger.error(`Could not remove all reacts from ${stringify(message)}`, err);
@@ -665,6 +720,10 @@ async function cmdCopyMappings(interaction) {
 		);
 	}
 
+	if (msg_from === msg_copy) {
+		return ephemReply(interaction, 'Cannot copy a message to itself!');
+	}
+
 	msg_from = await msg_from.fetch();
 	msg_copy = await msg_copy.fetch();
 
@@ -682,7 +741,7 @@ async function cmdCopyMappings(interaction) {
 
 	return database.transaction(async trx => {
 		const mapping = await database.getRoleReactMap(msg_from.id, trx);
-		for await (const [emoji_id, role_id] of mapping.entries()) {
+		for await (const [emoji_id, role_id] of entries(mapping)) {
 			try {
 				await database.addRoleReact({
 					guild_id:   guild.id,
@@ -708,11 +767,12 @@ async function cmdCopyMappings(interaction) {
 			}
 		}
 
-		return ephemEdit(interaction,
-			'Copied react-role mappings.\n' +
-			`Source: ${msg_from.url}\n` +
-			`Target: ${msg_copy.url}\n` +
-			'You can delete the original message now.'
+		return ephemEdit(interaction, mapping.size === 0
+			? 'Selected message has no mappings!'
+			: 'Copied react-role mappings.\n' +
+				`Source: ${msg_from.url}\n` +
+				`Target: ${msg_copy.url}\n` +
+				'You can delete the original message now.'
 		);
 	});
 }

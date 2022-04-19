@@ -6,6 +6,7 @@
  * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
  * for more information.
  ******************************************************************************/
+const lodash = require('lodash');
 const Perms = require('discord.js').Permissions.FLAGS;
 
 const commands = require('./commands');
@@ -123,9 +124,9 @@ async function onMessageDelete(message) {
 
 /**
  * Event handler for when a reaction is added to a message.
- * Checks if the message has any reaction roles configured. If so, adds that
- * role to the user who added the reaction. Removes any reaction that doesn't
- * correspond to a role.
+ * Checks if the message has any reaction roles configured for the given emoji.
+ * If so, adds that role (or roles) to the user who added the reaction.
+ * Removes any reaction that doesn't correspond to a role.
  */
 async function onReactionAdd(reaction, react_user) {
 	logger.debug(`Added ${detail(reaction)}`);
@@ -140,26 +141,28 @@ async function onReactionAdd(reaction, react_user) {
 		return;
 	}
 
-	const role_id = await database.getRoleReact({
+	const role_ids = await database.getRoleReacts({
 		message_id: reaction.message.id,
 		emoji_id: emojiToKey(reaction.emoji),
 	});
 
 	// Someone added an emoji that isn't mapped to a role
-	if (!role_id) {
+	if (role_ids.length === 0) {
 		return reaction.remove();
 	}
 
 	const member = await reaction.message.guild.members.fetch(react_user.id);
 
 	// Remove mutually exclusive roles from user
-	const mutex_roles = await database.getMutexRoles({
-		guild_id: reaction.message.guild.id,
-		role_id: role_id,
-	});
+	const mutex_roles = lodash.flatMap(
+		await Promise.all(role_ids.map(role_id => database.getMutexRoles({
+			guild_id: reaction.message.guild.id,
+			role_id: role_id,
+		})))
+	);
 	try {
 		await member.roles.remove(mutex_roles, 'Role bot removal (mutex)');
-		await member.roles.add(role_id, 'Role bot assignment');
+		await member.roles.add(role_ids, 'Role bot assignment');
 	} catch (err) {
 		logger.warn(`Failed to update roles on ${stringify(react_user)}`, err);
 	}
@@ -174,17 +177,18 @@ async function onReactionAdd(reaction, react_user) {
 	}
 
 	// Track assignment number for fun
-	await database.incrementAssignCounter();
+	await database.incrementAssignCounter(role_ids.length);
 
-	logger.info(`Added Role ${role_id} to ${detail(react_user)}`);
+	logger.info(`Added Roles ${stringify(role_ids)} to ${stringify(react_user)}`);
 }
 
 /**
  * Event handler for when a reaction is removed from a message.
- * Checks if the message has any reaction roles configured. If so, removes that
- * role from the user whose reaction was removed. Also re-adds the bot's
- * reaction if it is removed while a react-role is active.
+ * Checks if the message has any reaction roles configured for the given emoji.
+ * If so, removes that role (or roles) from the user whose reaction was removed.
+ * Also re-adds the bot's reaction if it is removed while a react-role is active.
  *
+ * NOTE:
  * This is only fired when a single reaction is removed, either by clicking on
  * an emoji or through the message's "reactions" context menu. It is NOT fired
  * when a bot removes all reactions (Discord uses a seprate event for that).
@@ -197,19 +201,20 @@ async function onReactionAdd(reaction, react_user) {
 async function onReactionRemove(reaction, react_user) {
 	logger.debug(`Removed ${detail(reaction)}`);
 
-	// TODO How do we handle two emojis mapped to the same role?
-	// Do we only remove the role if the user doesn't have any of the mapped
-	// reactions? Or do we remove when any of the emojis are un-reacted?
+	// TODO Maybe be a little smarter about how we remove roles when multiple
+	// emojis map to that role. Currently we remove the roll when a single emoji
+	// mapped to it is removed. Maybe we should wait until all emojis mapped to
+	// it are removed?
 
 	const emoji = reaction.emoji;
 
-	const role_id = await database.getRoleReact({
+	const role_ids = await database.getRoleReacts({
 		message_id: reaction.message.id,
 		emoji_id: emojiToKey(emoji),
 	});
 
 	// Ignore reactions on non-role-react posts
-	if (!role_id) {
+	if (role_ids.length === 0) {
 		return;
 	}
 
@@ -220,11 +225,11 @@ async function onReactionRemove(reaction, react_user) {
 
 	try {
 		const member = await reaction.message.guild.members.fetch(react_user.id);
-		await member.roles.remove(role_id, 'Role bot removal');
-		logger.info(`Removed Role ${role_id} from ${stringify(react_user)}`);
+		await member.roles.remove(role_ids, 'Role bot removal');
+		logger.info(`Removed Roles ${stringify(role_ids)} from ${stringify(react_user)}`);
 	} catch (err) {
 		logger.error(
-			`Failed to remove Role ${role_id} from ${stringify(react_user)}`,
+			`Failed to remove Roles ${stringify(role_ids)} from ${stringify(react_user)}`,
 			err
 		);
 	}
@@ -245,6 +250,7 @@ async function onReady(client) {
 	// Despite message IDs being unique, we can only fetch a message by ID
 	// through a channel object, so we need to iterate over all channels and
 	// search each one for the messages we expect.
+	let numCached = 0;
 	await Promise.all(client.guilds.cache.map(async guild => {
 		const guild_message_ids = await database.getRoleReactMessages(guild.id);
 		let errors = {}; // Allows us to aggregate and report errors
@@ -252,7 +258,9 @@ async function onReady(client) {
 		await Promise.all(guild.channels.cache.map(async channel => {
 			await Promise.all(guild_message_ids.map(async id => {
 				try {
-					await channel.messages?.fetch(id);
+					if (await channel.messages?.fetch(id)) {
+						numCached++;
+					}
 				} catch (err) {
 					if (err.message.includes('Unknown Message')) {
 						return; // Expected when message isn't in this channel
@@ -271,7 +279,7 @@ async function onReady(client) {
 			});
 	}));
 
-	logger.info('Finished pre-cache');
+	logger.info(`Finished pre-cache (${numCached} messages)`);
 }
 
 module.exports = {

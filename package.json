@@ -8,8 +8,9 @@
     "discord.js": "^13.3.1",
     "knex": "^0.20.13",
     "lodash": "^4.17.20",
+    "multimap": "^1.1.0",
     "node-cache": "^5.1.2",
-    "sqlite3": "^4.2.0",
+    "sqlite3": "^5.0.4",
     "winston": "^3.3.3"
   },
   "scripts": {

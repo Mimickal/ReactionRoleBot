@@ -6,9 +6,10 @@
  * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
  * for more information.
  ******************************************************************************/
+const path = require('path');
 const Winston = require('winston');
 
-const LOG_FILE_NAME = 'output.log';
+const LOG_FILE_NAME = path.join(__dirname, '..', 'output.log');
 const IS_PROD = process.env.NODE_ENV === 'prod';
 
 
