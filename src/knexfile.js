@@ -8,12 +8,14 @@
  ******************************************************************************/
 const path = require('path');
 
+const config = require('./config');
+
 module.exports = {
 	development: {
 		client: 'sqlite3',
 		useNullAsDefault: true,
 		connection: {
-			filename: path.join(__dirname, '..', 'dev.sqlite3'),
+			filename: config.database_file || path.join(__dirname, '..', 'dev.sqlite3'),
 		},
 		// Helps us catch hanging transactions in dev by locking up the database
 		// if we forget to commit anything.
@@ -35,7 +37,7 @@ module.exports = {
 		client: 'sqlite3',
 		useNullAsDefault: true,
 		connection: {
-			filename: '/srv/discord/rolebot.sqlite3'
+			filename: config.database_file || '/srv/discord/rolebot.sqlite3',
 		}
 	}
 };
