@@ -11,7 +11,7 @@ NODE_ENV="prod"
 mkdir -p $TEMP
 /usr/bin/env git --work-tree=$TEMP --git-dir=$REPO checkout -f
 cd $TEMP
-/usr/bin/env npm install
+/usr/bin/env npm ci
 NODE_ENV=$NODE_ENV /usr/bin/env npm run knex migrate:latest
 
 # Now install the code

@@ -11,7 +11,10 @@ Restart=on-failure
 RestartSec=10
 User=<user>
 Environment="NODE_ENV=prod"
-ExecStart=/usr/bin/env nodejs /srv/discord/ReactionRoleBot/main.js
+ExecStart=/usr/bin/env npm start --prefix /srv/discord/ReactionRoleBot/
+# If using nvm, you may need to do something like this instead:
+#Environment="NODE_ENV=prod" "NODE_VERSION=<version>"
+#ExecStart=<path to nvm-exec> npm start --prefix /srv/discord/ReactionRoleBot
 
 [Install]
 WantedBy=multi-user.target

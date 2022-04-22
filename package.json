@@ -1,17 +1,23 @@
 {
   "name": "reactionrolebot",
-  "version": "1.1.4",
+  "version": "2.0.0",
   "description": "I'm a basic, no BS Discord bot that can assign and unassign roles using message reactions. I am completely free and open source, and always will be.",
-  "main": "main.js",
+  "main": "src/main.js",
   "dependencies": {
-    "discord.js": "^12.5.1",
+    "discord-command-registry": "^1.2.0",
+    "discord.js": "^13.3.1",
     "knex": "^0.20.13",
     "lodash": "^4.17.20",
-    "sqlite3": "^4.1.1"
+    "multimap": "^1.1.0",
+    "node-cache": "^5.1.2",
+    "sqlite3": "^4.2.0",
+    "winston": "^3.3.3"
   },
-  "devDependencies": {},
   "scripts": {
-    "knex": "node_modules/knex/bin/cli.js",
+    "start": "node .",
+    "dev": "node . dev-config.json",
+    "knex": "npx knex --knexfile src/knexfile.js",
+    "register": "node src/register.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
