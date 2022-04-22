@@ -6,16 +6,12 @@
  * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
  * for more information.
  ******************************************************************************/
-const fs = require('fs');
-
 const Discord = require('discord.js');
 
+const config = require('./config');
 const events = require('./events');
 const logger = require('./logger');
 
-const CONFIG = JSON.parse(fs.readFileSync(
-	process.argv[2] || '/etc/discord/ReactionRoleBot/config.json'
-));
 const PACKAGE = require('../package.json');
 
 // Everything operates on IDs, so we can safely rely on partials.
@@ -54,7 +50,7 @@ client.on(Events.MESSAGE_REACTION_ADD, events.onReactionAdd);
 client.on(Events.MESSAGE_REACTION_REMOVE, events.onReactionRemove);
 
 
-client.login(CONFIG.token).catch(err => {
+client.login(config.token).catch(err => {
 	logger.error('Failed to log in!', err);
 	process.exit(1);
 });
