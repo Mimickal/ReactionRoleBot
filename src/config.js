@@ -49,6 +49,7 @@ module.exports = Object.seal({
 	database_file:   config.database_file,
 	enable_precache: config.enable_precache,
 	guild_id:        config.guild_id,
+	log_file:        config.log_file,
 	token:           config.token,
 });
 

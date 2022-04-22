@@ -9,7 +9,9 @@
 const path = require('path');
 const Winston = require('winston');
 
-const LOG_FILE_NAME = path.join(__dirname, '..', 'output.log');
+const config = require('./config');
+
+const LOG_FILE_NAME = config.log_file || path.join(__dirname, '..', 'output.log');
 const IS_PROD = process.env.NODE_ENV === 'prod';
 
 
