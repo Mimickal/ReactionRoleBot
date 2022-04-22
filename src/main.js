@@ -50,6 +50,7 @@ client.on(Events.MESSAGE_REACTION_ADD, events.onReactionAdd);
 client.on(Events.MESSAGE_REACTION_REMOVE, events.onReactionRemove);
 
 
+logger.info('Bot is starting...');
 client.login(config.token).catch(err => {
 	logger.error('Failed to log in!', err);
 	process.exit(1);
