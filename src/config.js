@@ -7,14 +7,22 @@
  * for more information.
  ******************************************************************************/
 const fs = require('fs');
+const path = require('path');
 
 const CONFIG_TEMPLATE = {
 	app_id: '<Your Discord bot application ID>',
 	token: '<Your Discord bot token>',
 };
-const DEFAULT_CONFIG_LOCATION = '/etc/discord/ReactionRoleBot/config.json';
 
-let location = process.argv[2] || DEFAULT_CONFIG_LOCATION;
+// This looks pretty jank, but really all we're doing here is trying to have
+// sensible default config file locations.
+// This isn't perfect, but it covers most use cases, including default dev and prod.
+const DEFAULT_CONFIG_LOCATION = process.env.NODE_ENV === 'prod'
+	? '/etc/discord/ReactionRoleBot/config.json'
+	: path.join(__dirname, '..', 'dev-config.json');
+const argv = require('minimist')(process.argv.slice(2));
+const conf_override = argv._.find(arg => arg.endsWith('json'));
+let location = conf_override || DEFAULT_CONFIG_LOCATION;
 let config;
 try {
 	config = JSON.parse(fs.readFileSync(location));
@@ -38,8 +46,10 @@ try {
 // Enumerate the values here so intellisense (and maintainers) knows what's available.
 module.exports = Object.seal({
 	app_id:          config.app_id,
+	database_file:   config.database_file,
 	enable_precache: config.enable_precache,
 	guild_id:        config.guild_id,
+	log_file:        config.log_file,
 	token:           config.token,
 });
 

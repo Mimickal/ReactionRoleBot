@@ -9,6 +9,7 @@ This guide assumes you're hosting on a Linux distro with `systemd`. The bot will
 work on other platforms, but you're on your own figuring that out.
 
 ## Running as a user (in dev-mode)
+
 Quick and easy. Also (mostly) platform-independent!
 
 Create a file `config.json` and paste in the following (obviously fill in the
@@ -36,6 +37,7 @@ npm start path/to/your/config.json
 ```
 
 ## Running as a service
+
 A little more effort to set up, but better for long-term use.
 
 The provided service file expects to find the bot code at
@@ -72,3 +74,20 @@ the service file a bit (see comments in provided service file).
 
 Now you should be able to run `systemctl restart reactionrolebot.service` to
 start your bot.
+
+## Additional config
+
+`config.json` supports a few more optional fields:
+
+- **database_file** - Use a different SQLite3 database file. This defaults to `/srv/discord/rolebot.sqlite3`. Users on non-Linux systems will probably want to change this.
+- **enable_precache** - Makes the bot pre-cache all messages with reaction roles on startup. This can help the bot be more consistent when it first starts, but will cause larger bots to be rate limited. Use with caution!
+- **guild_id** - Limits slash command registration to this Guild. This is useful for bot development.
+- **log_file** - Use a different log file. This defaults to `output.log` in the project root.
+
+You can also run the bot with a config file other than `config.json`, but you must provide an absolute file path!
+
+Examples:
+```
+npm run knex migrate:latest /absolute/path/to/my_config.json
+npm start /absolute/config/path.json
+```
