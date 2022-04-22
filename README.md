@@ -132,59 +132,10 @@ up react roles for `@everyone` like you would for any other role. It's silly, it
 won't do anything, but you *could* do it...
 
 ## Hosting your own instance
-This bot is built on [discord.js](https://discord.js.org/#/) v13, so you'll need
-Node.js 16.6.0 (or newer) installed. You will also need your own Discord bot
-account.
+[See the guide here](docs/hosting.md).
 
-If you're upgrading from an older Discord.js v12 version of the bot, the Node.js
-16.6.0 requirement might be problematic. you might consider using something like
-https://github.com/nvm-sh/nvm to make the transition easier.
-
-The `resources` directory has a service file that can be used with Linux distros
-with systemd. If you're installing this on some other operating system, you're
-on your own.
-
-### Running as a service
-The provided service file expects to find the bot code at
-`/srv/discord/ReactionRoleBot/`, and will want to create the sqlite database at
-`/srv/discord/rolebot.sqlite`. The easiest way to do this is to create a
-`/srv/discord` directory, and `chown` it so it belongs to the user running the
-bot.
-
-The following will prepare the bot to run. Run this from `/srv/discord`:
-```
-git clone https://github.com/Mimickal/ReactionRoleBot.git
-cd ReactionRoleBot
-npm install
-NODE_ENV=prod npm run knex migrate:latest
-```
-
-Create a file `/etc/discord/ReactionRoleBot/config.json` and paste in the
-following (obviously fill in the blanks with your bot's info):
-```json
-{
-  "token": "<your token here>",
-  "app_id": "<your bot application ID here>"
-}
-```
-
-Install `reactionrolebot.service` into `/etc/systemd/system/`.
-
-Now you should be able to run `systemctl restart reactionrolebot.service` to
-start your bot.
-
-### Running locally (in dev-mode)
-Run this wherever you want:
-```
-git clone https://github.com/Mimickal/ReactionRoleBot.git
-cd ReactionRoleBot
-npm install
-npm run knex migrate:latest
-```
-
-Create a file containing your bot token in plain text.
-
-Run this to start the bot: `node main.js path/to/your/config`
+If you are upgrading from version 1.x, [see the migration guide](
+docs/migrate.md).
 
 ## License
 Copyright 2020 [Mimickal](https://github.com/Mimickal)

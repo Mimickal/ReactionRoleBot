@@ -14,6 +14,7 @@
     "winston": "^3.3.3"
   },
   "scripts": {
+    "start": "node .",
     "dev": "node . dev-config.json",
     "knex": "npx knex --knexfile src/knexfile.js",
     "register": "node src/register.js",
