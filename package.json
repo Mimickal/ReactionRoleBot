@@ -1,6 +1,6 @@
 {
   "name": "reactionrolebot",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "I'm a basic, no BS Discord bot that can assign and unassign roles using message reactions. I am completely free and open source, and always will be.",
   "main": "src/main.js",
   "dependencies": {
