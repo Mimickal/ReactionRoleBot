@@ -10,6 +10,7 @@ const lodash = require('lodash');
 const Perms = require('discord.js').Permissions.FLAGS;
 
 const commands = require('./commands');
+const config = require('./config');
 const database = require('./database');
 const logger = require('./logger');
 const {
@@ -239,12 +240,29 @@ async function onReactionRemove(reaction, react_user) {
  * Event handler for when the bot is logged in.
  *
  * Logs the bot user we logged in as.
- *
- * Pre-caches messages we have react role mappings on. This prevents an issue
- * where the bot sometimes fails to pick up reacts when it first restarts.
  */
 async function onReady(client) {
 	logger.info(`Logged in as ${client.user.tag} (${client.user.id})`);
+
+	if (config.enable_precache) {
+		logger.warn(unindent(`
+			Precaching is VERY hard on Discord's API and will cause the bot to
+			get rate limited, unless the bot is only in very few servers. Use
+			with caution.
+		`));
+		await precache(client);
+	}
+}
+
+/**
+ * Pre-caches messages we have react role mappings on. This can prevent an issue
+ * where the bot sometimes fails to pick up reacts when it first restarts.
+ *
+ * WARNING: This function is *very* hard on Discord's API, and will cause the
+ * bot to get rate limited if it's in too many servers. This really shouldn't be
+ * used.
+ */
+async function precache(client) {
 	logger.info('Precaching messages...');
 
 	// Despite message IDs being unique, we can only fetch a message by ID

@@ -37,8 +37,9 @@ try {
 
 // Enumerate the values here so intellisense (and maintainers) knows what's available.
 module.exports = Object.seal({
-	app_id:   config.app_id,
-	guild_id: config.guild_id,
-	token:    config.token,
+	app_id:          config.app_id,
+	enable_precache: config.enable_precache,
+	guild_id:        config.guild_id,
+	token:           config.token,
 });
 
