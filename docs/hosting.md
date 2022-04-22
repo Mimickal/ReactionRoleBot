@@ -64,10 +64,11 @@ npm run register /etc/discord/ReactionRoleBot/config.json
 NODE_ENV=prod npm run knex migrate:latest
 ```
 
-Install `reactionrolebot.service` into `/etc/systemd/system/`. This service file
-depends on the above directories, so if you want to change them, you'll also
-need to edit this file.
+Add your user to `reactionrolebot.service`, then install it into
+`/etc/systemd/system/` (just copy the file into that directory). This service
+file depends on the above directories, so if you want to change them, you'll
+also need to edit those fields. If you are using `nvm`, you may need to tweak
+the service file a bit (see comments in provided service file).
 
 Now you should be able to run `systemctl restart reactionrolebot.service` to
 start your bot.
-
