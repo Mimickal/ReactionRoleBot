@@ -6,9 +6,9 @@
  * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
  * for more information.
  ******************************************************************************/
-const fs = require('fs');
 const path = require('path');
 
+const config = require('./config');
 const logger = require('./logger');
 const registry = require('./commands');
 
@@ -24,8 +24,6 @@ if (!process.argv[2]) {
 	} <your-config.json>\n${WHAT_AM_I}`);
 	process.exit();
 }
-
-const config = JSON.parse(fs.readFileSync(process.argv[2]));
 
 let output = 'Registering commmands ';
 if (config.guild_id) {

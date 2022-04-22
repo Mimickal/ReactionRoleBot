@@ -6,16 +6,12 @@
  * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
  * for more information.
  ******************************************************************************/
-const fs = require('fs');
-
 const Discord = require('discord.js');
 
+const config = require('./config');
 const events = require('./events');
 const logger = require('./logger');
 
-const CONFIG = JSON.parse(fs.readFileSync(
-	process.argv[2] || '/etc/discord/ReactionRoleBot/config.json'
-));
 const PACKAGE = require('../package.json');
 
 // Everything operates on IDs, so we can safely rely on partials.
@@ -23,7 +19,6 @@ const PACKAGE = require('../package.json');
 const client = new Discord.Client({
 	intents: [
 		Discord.Intents.FLAGS.GUILDS,
-		Discord.Intents.FLAGS.GUILD_MEMBERS,
 		Discord.Intents.FLAGS.GUILD_EMOJIS_AND_STICKERS,
 		Discord.Intents.FLAGS.GUILD_MESSAGES,
 		Discord.Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
@@ -54,7 +49,8 @@ client.on(Events.MESSAGE_REACTION_ADD, events.onReactionAdd);
 client.on(Events.MESSAGE_REACTION_REMOVE, events.onReactionRemove);
 
 
-client.login(CONFIG.token).catch(err => {
+logger.info('Bot is starting...');
+client.login(config.token).catch(err => {
 	logger.error('Failed to log in!', err);
 	process.exit(1);
 });
