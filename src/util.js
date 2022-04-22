@@ -119,7 +119,7 @@ function isDiscordId(str) {
  * Matches built-in unicode emoji literals.
  */
 function isEmojiStr(str) {
-	return str?.match?.(/^\p{Extended_Pictographic}$/u);
+	return str?.match?.(/^\p{Emoji}+/u);
 }
 
 /**
