@@ -8,6 +8,7 @@
     "discord.js": "^13.3.1",
     "knex": "^0.20.13",
     "lodash": "^4.17.20",
+    "minimist": "^1.2.6",
     "multimap": "^1.1.0",
     "node-cache": "^5.1.2",
     "sqlite3": "^4.2.0",
