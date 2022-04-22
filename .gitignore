@@ -2,5 +2,5 @@ node_modules/
 todo.txt
 *.log
 *.swp
-dev.sqlite3
+*.sqlite3
 dev-config.json
