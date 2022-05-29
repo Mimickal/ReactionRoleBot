@@ -105,7 +105,7 @@ function ephemReply(interaction, content) {
  * Handles both custom Discord.js Emojis and standard unicode emojis.
  */
 function _isEmoji(thing) {
-	return isEmojiStr(thing) || thing instanceof Emoji;
+	return !isDiscordId(thing) && (isEmojiStr(thing) || thing instanceof Emoji);
 }
 
 /**
