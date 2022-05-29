@@ -5,7 +5,7 @@
   "main": "src/main.js",
   "dependencies": {
     "discord-command-registry": "^1.2.2",
-    "discord.js": "^13.3.1",
+    "discord.js": "^13.7.0",
     "knex": "^0.20.13",
     "lodash": "^4.17.20",
     "minimist": "^1.2.6",
