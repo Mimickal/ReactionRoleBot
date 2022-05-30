@@ -20,11 +20,13 @@ const client = new Discord.Client({
 	intents: [
 		Discord.Intents.FLAGS.GUILDS,
 		Discord.Intents.FLAGS.GUILD_EMOJIS_AND_STICKERS,
+		Discord.Intents.FLAGS.GUILD_MEMBERS,
 		Discord.Intents.FLAGS.GUILD_MESSAGES,
 		Discord.Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
 	],
 	partials: [
 		// https://discordjs.guide/popular-topics/reactions.html#listening-for-reactions-on-old-messages
+		Discord.Constants.PartialTypes.GUILD_MEMBER,
 		Discord.Constants.PartialTypes.MESSAGE,
 		Discord.Constants.PartialTypes.CHANNEL,
 		Discord.Constants.PartialTypes.REACTION,
@@ -42,6 +44,7 @@ const Events = Discord.Constants.Events;
 client.on(Events.CLIENT_READY, events.onReady);
 client.on(Events.GUILD_CREATE, events.onGuildJoin);
 client.on(Events.GUILD_DELETE, events.onGuildLeave);
+client.on(Events.GUILD_MEMBER_UPDATE, events.onGuildMemberUpdate);
 client.on(Events.INTERACTION_CREATE, events.onInteraction);
 client.on(Events.MESSAGE_BULK_DELETE, events.onMessageBulkDelete);
 client.on(Events.MESSAGE_DELETE, events.onMessageDelete);
