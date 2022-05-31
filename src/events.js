@@ -23,8 +23,17 @@ const {
 
 /**
  * Allows us to "lock" a user to prevent multiple events from trying to update
- * their roles at the same time. Any event that modifies a user should acquire
- * a lock on that user first.
+ * their roles at the same time.
+ *
+ * Any event that modifies a user should acquire a lock on that user first.
+ * The corresponding `GUILD_MEMBER_UPDATE` event will release the lock. If that
+ * event doesn't fire for some reason, `UserMutex` has a fallback timer to
+ * release the lock anyway.
+ *
+ * Discord API request promises resolve when Discord *acknowledges* them, **not**
+ * when it *applies* them. Because of this, Discord.js does not update its
+ * internal user role cache until it receives the corresponding
+ * `GUILD_MEMBER_UPDATE` event.
  */
 const USER_MUTEX = new UserMutex();
 
@@ -93,8 +102,10 @@ async function onGuildLeave(guild) {
 
 /**
  * Event handler for when a guild member is updated.
- * We use this to clear the user lock, since this event is fired once a
- * user's roles are fully updated.
+ * Releases the mutex lock on the user, since this event is fired once a user's
+ * roles are fully updated.
+ *
+ * See docs for: {@link USER_MUTEX}
  */
 async function onGuildMemberUpdate(old_member, new_member) {
 	USER_MUTEX.unlock(new_member);
