@@ -257,6 +257,13 @@ async function onReactionRemove(reaction, react_user) {
 	try {
 		const member = await reaction.message.guild.members.fetch(react_user.id);
 		await USER_MUTEX.lock(member); // see USER_MUTEX comment
+
+		// onGuildMemberUpdate won't fire if we don't actually change roles
+		if (!role_ids.some(role_id => member.roles.cache.has(role_id))) {
+			USER_MUTEX.unlock(member);
+			return;
+		}
+
 		await member.roles.remove(role_ids, 'Role bot removal');
 		logger.info(`Removed Roles ${stringify(role_ids)} from ${stringify(react_user)}`);
 	} catch (err) {
