@@ -190,8 +190,8 @@ async function onReactionAdd(reaction, react_user) {
 			role_id: role_id,
 		})))
 	);
+	await USER_MUTEX.lock(member); // See USER_MUTEX comment
 	try {
-		await USER_MUTEX.lock(member); // See USER_MUTEX comment
 		await member.roles.remove(mutex_roles, 'Role bot removal (mutex)');
 		await member.roles.add(role_ids, 'Role bot assignment');
 	} catch (err) {
@@ -254,13 +254,13 @@ async function onReactionRemove(reaction, react_user) {
 		return reaction.message.react(emoji);
 	}
 
+	await USER_MUTEX.lock(react_user); // see USER_MUTEX comment
 	try {
 		const member = await reaction.message.guild.members.fetch(react_user.id);
-		await USER_MUTEX.lock(member); // see USER_MUTEX comment
 
 		// onGuildMemberUpdate won't fire if we don't actually change roles
 		if (!role_ids.some(role_id => member.roles.cache.has(role_id))) {
-			USER_MUTEX.unlock(member);
+			USER_MUTEX.unlock(react_user);
 			return;
 		}
 
