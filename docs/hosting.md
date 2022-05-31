@@ -8,6 +8,11 @@ like https://github.com/nvm-sh/nvm.
 This guide assumes you're hosting on a Linux distro with `systemd`. The bot will
 work on other platforms, but you're on your own figuring that out.
 
+## Bot account setup
+
+Your bot account needs the privileged "Server Members Intent" enabled.
+It also needs [these permissions](../README.md#permissions).
+
 ## Running as a user (in dev-mode)
 
 Quick and easy. Also (mostly) platform-independent!
