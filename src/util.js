@@ -9,6 +9,7 @@
 const {
 	Emoji,
 	Guild,
+	GuildMember,
 	Interaction,
 	Message,
 	MessageReaction,
@@ -105,7 +106,7 @@ function ephemReply(interaction, content) {
  * Handles both custom Discord.js Emojis and standard unicode emojis.
  */
 function _isEmoji(thing) {
-	return isEmojiStr(thing) || thing instanceof Emoji;
+	return !isDiscordId(thing) && (isEmojiStr(thing) || thing instanceof Emoji);
 }
 
 /**
@@ -165,6 +166,10 @@ function stringify(thing) {
 	else if (thing instanceof User) {
 		const user = thing;
 		return `User ${user.id}`;
+	}
+	else if (thing instanceof GuildMember) {
+		const member = thing;
+		return `User ${member.id}`; // Same as member.user.id
 	}
 	else if (Array.isArray(thing)) {
 		return thing.map(t => stringify(t)).join(', ');

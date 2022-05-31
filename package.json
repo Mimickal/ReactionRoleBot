@@ -1,11 +1,12 @@
 {
   "name": "reactionrolebot",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "I'm a basic, no BS Discord bot that can assign and unassign roles using message reactions. I am completely free and open source, and always will be.",
   "main": "src/main.js",
   "dependencies": {
+    "async-mutex": "^0.3.2",
     "discord-command-registry": "^1.2.2",
-    "discord.js": "^13.3.1",
+    "discord.js": "^13.7.0",
     "knex": "^0.20.13",
     "lodash": "^4.17.20",
     "minimist": "^1.2.6",

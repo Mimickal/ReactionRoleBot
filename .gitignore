@@ -3,4 +3,5 @@ todo.txt
 *.log
 *.swp
 *.sqlite3
-dev-config.json
+*-config.json
+invite

@@ -12,6 +12,7 @@ const Perms = require('discord.js').Permissions.FLAGS;
 const commands = require('./commands');
 const config = require('./config');
 const database = require('./database');
+const UserMutex = require('./mutex');
 const logger = require('./logger');
 const {
 	detail,
@@ -19,6 +20,22 @@ const {
 	stringify,
 	unindent,
 } = require('./util');
+
+/**
+ * Allows us to "lock" a user to prevent multiple events from trying to update
+ * their roles at the same time.
+ *
+ * Any event that modifies a user should acquire a lock on that user first.
+ * The corresponding `GUILD_MEMBER_UPDATE` event will release the lock. If that
+ * event doesn't fire for some reason, `UserMutex` has a fallback timer to
+ * release the lock anyway.
+ *
+ * Discord API request promises resolve when Discord *acknowledges* them, **not**
+ * when it *applies* them. Because of this, Discord.js does not update its
+ * internal user role cache until it receives the corresponding
+ * `GUILD_MEMBER_UPDATE` event.
+ */
+const USER_MUTEX = new UserMutex();
 
 const REQUIRED_PERMISSIONS = Object.freeze({
 	[Perms.ADD_REACTIONS]:        'Add Reactions',
@@ -81,6 +98,17 @@ async function onGuildLeave(guild) {
 	} catch (err) {
 		logger.error(`Left ${stringify(guild)} but failed to delete data!`, err);
 	}
+}
+
+/**
+ * Event handler for when a guild member is updated.
+ * Releases the mutex lock on the user, since this event is fired once a user's
+ * roles are fully updated.
+ *
+ * See docs for: {@link USER_MUTEX}
+ */
+async function onGuildMemberUpdate(old_member, new_member) {
+	USER_MUTEX.unlock(new_member);
 }
 
 /**
@@ -155,12 +183,14 @@ async function onReactionAdd(reaction, react_user) {
 	const member = await reaction.message.guild.members.fetch(react_user.id);
 
 	// Remove mutually exclusive roles from user
+	// FIXME this database call should optionally take an array
 	const mutex_roles = lodash.flatMap(
 		await Promise.all(role_ids.map(role_id => database.getMutexRoles({
 			guild_id: reaction.message.guild.id,
 			role_id: role_id,
 		})))
 	);
+	await USER_MUTEX.lock(member); // See USER_MUTEX comment
 	try {
 		await member.roles.remove(mutex_roles, 'Role bot removal (mutex)');
 		await member.roles.add(role_ids, 'Role bot assignment');
@@ -224,8 +254,16 @@ async function onReactionRemove(reaction, react_user) {
 		return reaction.message.react(emoji);
 	}
 
+	await USER_MUTEX.lock(react_user); // see USER_MUTEX comment
 	try {
 		const member = await reaction.message.guild.members.fetch(react_user.id);
+
+		// onGuildMemberUpdate won't fire if we don't actually change roles
+		if (!role_ids.some(role_id => member.roles.cache.has(role_id))) {
+			USER_MUTEX.unlock(react_user);
+			return;
+		}
+
 		await member.roles.remove(role_ids, 'Role bot removal');
 		logger.info(`Removed Roles ${stringify(role_ids)} from ${stringify(react_user)}`);
 	} catch (err) {
@@ -303,6 +341,7 @@ async function precache(client) {
 module.exports = {
 	onGuildJoin,
 	onGuildLeave,
+	onGuildMemberUpdate,
 	onInteraction,
 	onMessageBulkDelete,
 	onMessageDelete,
