@@ -46,7 +46,7 @@ class UserMutex {
 		}
 		const mutex = this.#mutexes.get(key);
 
-		logger.debug(`Locking ${stringify(user)} (refs: ${mutex.ref_count})`);
+		logger.debug(`Locking ${stringify(user)} (refs: ${mutex.ref_count}) (${caller(3)})`);
 		await mutex.acquire();
 
 		// Piggyback off the mutex lock so only one timer is active at a time.
@@ -69,7 +69,7 @@ class UserMutex {
 
 		// Make unlock idempotent too
 		if (!this.#mutexes.has(key)) {
-			logger.debug(`Extraneous unlock on ${stringify(user)}`);
+			logger.debug(`Extraneous unlock on ${stringify(user)} (${caller(4)})`);
 			return;
 		}
 		const mutex = this.#mutexes.get(key);
@@ -80,7 +80,7 @@ class UserMutex {
 		if (timed_out) {
 			logger.warn(`${log_msg} after timeout`);
 		} else {
-			logger.debug(log_msg);
+			logger.debug(`${log_msg} (${caller(4)})`);
 		}
 
 		mutex.release();
@@ -90,6 +90,13 @@ class UserMutex {
 			this.#mutexes.delete(key);
 		}
 	}
+}
+
+// Get the calling function's name
+function caller(depth) {
+	const call_line = new Error().stack.split('\n').slice(depth, depth + 1).pop();
+	const match = call_line.match(/\s*at ([\w.]+)/);
+	return match[1];
 }
 
 module.exports = UserMutex;
