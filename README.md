@@ -6,7 +6,7 @@ src="https://www.gnu.org/graphics/agplv3-155x51.png">
 
 A Discord bot that can assign roles based on message reactions.<br/>
 [You can invite my live instance of the bot to your server with this link](
-https://discord.com/oauth2/authorize?client_id=692585944934514738&scope=bot&permissions=335881280
+https://discord.com/oauth2/authorize?client_id=692585944934514738&scope=applications.commands%20bot&permissions=335881280
 ).
 
 # Why this bot?
