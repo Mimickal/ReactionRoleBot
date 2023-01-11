@@ -7,7 +7,7 @@
     "async-mutex": "^0.3.2",
     "discord-command-registry": "^1.2.2",
     "discord.js": "^13.7.0",
-    "knex": "^0.20.13",
+    "knex": "^2.4.0",
     "lodash": "^4.17.20",
     "minimist": "^1.2.6",
     "multimap": "^1.1.0",
