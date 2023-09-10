@@ -4,6 +4,7 @@
   "description": "I'm a basic, no BS Discord bot that can assign and unassign roles using message reactions. I am completely free and open source, and always will be.",
   "main": "src/main.ts",
   "dependencies": {
+    "@mimickal/discord-logging": "github:Mimickal/discord-logging#v1.3.0",
     "async-mutex": "^0.3.2",
     "discord-command-registry": "github:Mimickal/discordjs-command-registry#403ca50cf8791be793fe54ca1868a4948dd196e6",
     "discord.js": "^14.9.0",
@@ -13,8 +14,7 @@
     "multimap": "^1.1.0",
     "node-cache": "^5.1.2",
     "sqlite3": "^4.2.0",
-    "ts-node": "^10.9.1",
-    "winston": "^3.3.3"
+    "ts-node": "^10.9.1"
   },
   "scripts": {
     "start": "NODE_ENV=prod npx ts-node .",

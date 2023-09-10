@@ -9,14 +9,12 @@
 const knexfile = require('./knexfile');
 const knex = require('knex')(knexfile[process.env.NODE_ENV || 'development']);
 const lodash = require('lodash');
+const { GlobalLogger, stringify } = require('@mimickal/discord-logging');
 const MultiMap = require('multimap');
 
-const logger = require('./logger');
-const {
-	isDiscordId,
-	isEmojiStr,
-	stringify,
-} = require('./util');
+const { isDiscordId, isEmojiStr } = require('./util');
+
+const logger = GlobalLogger.logger;
 
 const META = 'meta';
 const MUTEX = 'mutex';

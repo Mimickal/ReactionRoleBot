@@ -6,20 +6,32 @@
  * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
  * for more information.
  ******************************************************************************/
-import { BaseInteraction, ChannelType, Client, Collection, Guild, GuildMember, Message, MessageReaction, PartialGuildMember, PartialMessage, PartialMessageReaction, PartialUser, PermissionFlagsBits, User } from 'discord.js';
+import {
+	BaseInteraction,
+	ChannelType,
+	Client,
+	Collection,
+	Guild,
+	GuildMember,
+	Message,
+	MessageReaction,
+	PartialGuildMember,
+	PartialMessage,
+	PartialMessageReaction,
+	PartialUser,
+	PermissionFlagsBits,
+	User,
+} from 'discord.js';
+import { GlobalLogger, detail, stringify, unindent } from '@mimickal/discord-logging';
 const lodash = require('lodash');
 
 const commands = require('./commands');
 const config = require('./config');
 const database = require('./database');
 const UserMutex = require('./mutex');
-const logger = require('./logger');
-const {
-	detail,
-	emojiToKey,
-	stringify,
-	unindent,
-} = require('./util');
+const { emojiToKey } = require('./util');
+
+const logger = GlobalLogger.logger;
 
 /**
  * Allows us to "lock" a user to prevent multiple events from trying to update

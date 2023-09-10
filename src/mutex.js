@@ -1,7 +1,7 @@
 const { Mutex } = require('async-mutex');
 
-const logger = require('./logger');
-const { stringify } = require('./util');
+const { GlobalLogger, stringify } = require('@mimickal/discord-logging');
+const logger = GlobalLogger.logger;
 
 // TODO consider parameterizing this if we ever pull this out to a library.
 const TIMEOUT = 5000;

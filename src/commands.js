@@ -32,22 +32,25 @@ const {
 	roleMention,
 } = require('discord-command-registry');
 const Discord = require('discord.js');
+const {
+	GlobalLogger,
+	asLines,
+	stringify,
+	unindent,
+} = require('@mimickal/discord-logging');
 const NodeCache = require('node-cache');
 
 const database = require('./database');
 const { rethrowHandled } = database;
 const info = require('../package.json');
-const logger = require('./logger');
 const {
-	asLines,
 	emojiToKey,
 	entries,
 	ephemEdit,
 	ephemReply,
-	stringify,
-	unindent,
 } = require('./util');
 
+const logger = GlobalLogger.logger;
 
 const ONE_HOUR_IN_SECONDS = 60*60;
 const CACHE_SETTINGS = {

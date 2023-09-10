@@ -6,10 +6,11 @@
  * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
  * for more information.
  ******************************************************************************/
+const { GlobalLogger } = require('@mimickal/discord-logging');
 const path = require('path');
 
 const config = require('./config');
-const logger = require('./logger');
+const logger = GlobalLogger.logger;
 const registry = require('./commands');
 
 const WHAT_AM_I = `

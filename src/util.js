@@ -6,18 +6,10 @@
  * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
  * for more information.
  ******************************************************************************/
-const {
-	Emoji,
-	Guild,
-	GuildMember,
-	Interaction,
-	Message,
-	MessageReaction,
-	Role,
-	User,
-} = require('discord.js');
+const { Emoji } = require('discord.js');
+const { GlobalLogger } = require('@mimickal/discord-logging');
 
-const logger = require('./logger');
+const logger = GlobalLogger.logger;
 
 /**
  * Most IDs are between 17 and 19 characters, but I have seen some patterns
@@ -26,34 +18,6 @@ const logger = require('./logger');
  * that, well, cool.
  */
 const DISCORD_ID_PATTERN = RegExp('^\\d{17,22}$');
-
-/**
- * Joins the given array of strings using newlines.
- */
-function asLines(lines) {
-	if (!Array.isArray(lines)) {
-		lines = [lines];
-	}
-	return lines.join('\n');
-}
-
-/**
- * Like stringify, but provides more detail. Falls back on stringify.
- */
-function detail(thing) {
-	if (thing instanceof Interaction) {
-		const int = thing;
-		return `${stringify(int.guild)} ${stringify(int.user)} ${stringify(int)}`;
-	}
-	else if (thing instanceof MessageReaction) {
-		const reaction = thing;
-		return `${stringify(reaction)} on ${stringify(reaction.message)}`;
-	}
-	else {
-		// Fall back on standard strings
-		return stringify(thing);
-	}
-}
 
 /**
  * Converts an emoji to a string we can use as a key (e.g. in a database).
@@ -123,84 +87,12 @@ function isEmojiStr(str) {
 	return str?.match?.(/^\p{Emoji}+/u);
 }
 
-/**
- * Given a Discord.js object, returns a logger-friendly string describing it in
- * better detail.
- *
- * This purposely only outputs IDs to limit the amount of user data logged.
- */
-// TODO stolen from Zerda. Maybe pull this out to a module with the logger?
-function stringify(thing) {
-	if (!thing) {
-		return '[undefined]';
-	}
-	else if (_isEmoji(thing)) {
-		const emoji = thing;
-		return `Emoji ${emojiToKey(emoji)}`;
-	}
-	else if (thing instanceof Guild) {
-		const guild = thing;
-		return `Guild ${guild.id}`;
-	}
-	else if (thing instanceof Interaction) {
-		const interaction = thing;
-		const cmd_str = Array.of(
-			interaction.commandName,
-			interaction.options.getSubcommandGroup(false),
-			interaction.options.getSubcommand(false),
-		).filter(x => x).join(' ');
-		return `Interaction "${cmd_str}"`;
-	}
-	else if (thing instanceof Message) {
-		const message = thing;
-		return `Message ${message.url}`;
-	}
-	else if (thing instanceof MessageReaction) {
-		const reaction = thing;
-		return `Reaction ${emojiToKey(reaction.emoji)}`;
-	}
-	else if (thing instanceof Role) {
-		const role = thing;
-		return `Role ${role.id}`;
-	}
-	else if (thing instanceof User) {
-		const user = thing;
-		return `User ${user.id}`;
-	}
-	else if (thing instanceof GuildMember) {
-		const member = thing;
-		return `User ${member.id}`; // Same as member.user.id
-	}
-	else if (Array.isArray(thing)) {
-		return thing.map(t => stringify(t)).join(', ');
-	}
-	else if (typeof thing === 'string' || thing instanceof String) {
-		return thing;
-	}
-	else {
-		return JSON.stringify(thing);
-	}
-}
-
-/**
- * Allows us to treat multi-line template strings as a single continuous line.
- */
-function unindent(str) {
-	return str
-		.replace(/^\s*/, '')
-		.replace(/\n\t*/g, ' ');
-}
-
 module.exports = {
-	asLines,
-	detail,
 	emojiToKey,
 	entries,
 	ephemEdit,
 	ephemReply,
 	isDiscordId,
 	isEmojiStr,
-	stringify,
-	unindent,
 };
 
