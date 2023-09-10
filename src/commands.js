@@ -25,7 +25,6 @@
 //     The only exception to this is committing an active database transaction.
 
 const {
-	ApplicationCommandType,
 	Options,
 	SlashCommandRegistry,
 	bold,
@@ -69,12 +68,12 @@ const REGISTRY = new SlashCommandRegistry()
 	)
 	.addContextMenuCommand(command => command
 		.setName('select-message')
-		.setType(ApplicationCommandType.Message)
+		.setType(Discord.ApplicationCommandType.Message)
 		.setHandler(requireAuth(cmdSelect))
 	)
 	.addContextMenuCommand(command => command
 		.setName('select-copy-target')
-		.setType(ApplicationCommandType.Message)
+		.setType(Discord.ApplicationCommandType.Message)
 		.setHandler(requireAuth(cmdSelectCopy))
 	)
 	.addCommand(command => command
@@ -233,7 +232,7 @@ function requireAuth(handler) {
 	return async function(interaction) {
 		const member = await interaction.member.fetch(); // Ensures cache
 
-		if (member.permissions.has(Discord.Permissions.FLAGS.ADMINISTRATOR)) {
+		if (member.permissions.has(Discord.PermissionFlagsBits.Administrator)) {
 			return handler(interaction);
 		}
 

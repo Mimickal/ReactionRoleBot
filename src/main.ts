@@ -6,10 +6,10 @@
  * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
  * for more information.
  ******************************************************************************/
-const Discord = require('discord.js');
+import * as Discord from 'discord.js';
 
 const config = require('./config');
-const events = require('./events');
+import * as events from './events';
 const logger = require('./logger');
 
 const PACKAGE = require('../package.json');
@@ -18,38 +18,37 @@ const PACKAGE = require('../package.json');
 // This allows reaction events to fire for uncached messages.
 const client = new Discord.Client({
 	intents: [
-		Discord.Intents.FLAGS.GUILDS,
-		Discord.Intents.FLAGS.GUILD_EMOJIS_AND_STICKERS,
-		Discord.Intents.FLAGS.GUILD_MEMBERS,
-		Discord.Intents.FLAGS.GUILD_MESSAGES,
-		Discord.Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+		Discord.GatewayIntentBits.Guilds,
+		Discord.GatewayIntentBits.GuildEmojisAndStickers,
+		Discord.GatewayIntentBits.GuildMembers,
+		Discord.GatewayIntentBits.GuildMessages,
+		Discord.GatewayIntentBits.GuildMessageReactions,
 	],
 	partials: [
 		// https://discordjs.guide/popular-topics/reactions.html#listening-for-reactions-on-old-messages
-		Discord.Constants.PartialTypes.GUILD_MEMBER,
-		Discord.Constants.PartialTypes.MESSAGE,
-		Discord.Constants.PartialTypes.CHANNEL,
-		Discord.Constants.PartialTypes.REACTION,
-		Discord.Constants.PartialTypes.USER,
+		Discord.Partials.GuildMember,
+		Discord.Partials.Message,
+		Discord.Partials.Channel,
+		Discord.Partials.Reaction,
+		Discord.Partials.User,
 	],
 	presence: {
 		activities: [{
 			name: `Version ${PACKAGE.version}`,
-			type: Discord.Constants.ActivityTypes.PLAYING,
+			type: Discord.ActivityType.Playing,
 		}],
 	},
 });
 
-const Events = Discord.Constants.Events;
-client.on(Events.CLIENT_READY, events.onReady);
-client.on(Events.GUILD_CREATE, events.onGuildJoin);
-client.on(Events.GUILD_DELETE, events.onGuildLeave);
-client.on(Events.GUILD_MEMBER_UPDATE, events.onGuildMemberUpdate);
-client.on(Events.INTERACTION_CREATE, events.onInteraction);
-client.on(Events.MESSAGE_BULK_DELETE, events.onMessageBulkDelete);
-client.on(Events.MESSAGE_DELETE, events.onMessageDelete);
-client.on(Events.MESSAGE_REACTION_ADD, events.onReactionAdd);
-client.on(Events.MESSAGE_REACTION_REMOVE, events.onReactionRemove);
+client.on(Discord.Events.ClientReady, events.onReady);
+client.on(Discord.Events.GuildCreate, events.onGuildJoin);
+client.on(Discord.Events.GuildDelete, events.onGuildLeave);
+client.on(Discord.Events.GuildMemberUpdate, events.onGuildMemberUpdate);
+client.on(Discord.Events.InteractionCreate, events.onInteraction);
+client.on(Discord.Events.MessageBulkDelete, events.onMessageBulkDelete);
+client.on(Discord.Events.MessageDelete, events.onMessageDelete);
+client.on(Discord.Events.MessageReactionAdd, events.onReactionAdd);
+client.on(Discord.Events.MessageReactionRemove, events.onReactionRemove);
 
 
 logger.info(`Bot is starting with config: ${JSON.stringify({
@@ -61,4 +60,3 @@ client.login(config.token).catch(err => {
 	logger.error('Failed to log in!', err);
 	process.exit(1);
 });
-
