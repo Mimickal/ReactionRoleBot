@@ -28,7 +28,7 @@ const lodash = require('lodash');
 const commands = require('./commands');
 const config = require('./config');
 const database = require('./database');
-const UserMutex = require('./mutex');
+import UserMutex from './mutex';
 const { emojiToKey } = require('./util');
 
 const logger = GlobalLogger.logger;
