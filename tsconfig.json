@@ -1,0 +1,20 @@
+{
+    // We run with ts-node so these options are just to satisfy the editor
+    "compilerOptions": {
+        "lib": ["ES2022"],
+        "module": "CommonJS",
+        "target": "ES2020",
+        "esModuleInterop": true,
+        "strict": true,
+    },
+    "ts-node": {
+        "esm": true,
+        "skipIgnore": true,
+        "logError": true,
+        "compilerOptions": {
+            "esModuleInterop": true,
+            "resolveJsonModule": true,
+            "strict": true,
+        }
+    }
+}

@@ -5,10 +5,12 @@
   "main": "src/main.ts",
   "dependencies": {
     "@mimickal/discord-logging": "github:Mimickal/discord-logging#v1.3.0",
+    "@types/lodash": "^4.14.199",
+    "@types/multimap": "^1.1.2",
     "async-mutex": "^0.3.2",
-    "discord-command-registry": "github:Mimickal/discordjs-command-registry#403ca50cf8791be793fe54ca1868a4948dd196e6",
+    "discord-command-registry": "^3.1.1",
     "discord.js": "^14.9.0",
-    "knex": "^0.20.13",
+    "knex": "^2.5.1",
     "lodash": "^4.17.20",
     "minimist": "^1.2.6",
     "multimap": "^1.1.0",
@@ -27,7 +29,7 @@
     "type": "git",
     "url": "git+https://github.com/Mimickal/ReactionRoleBot.git"
   },
-  "author": "Mia Moretti",
+  "author": "Mia Moretti <mimickal.dev@gmail.com>",
   "license": "AGPL-3.0",
   "bugs": {
     "url": "https://github.com/Mimickal/ReactionRoleBot/issues"
