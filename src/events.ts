@@ -23,13 +23,13 @@ import {
 	User,
 } from 'discord.js';
 import { GlobalLogger, detail, stringify, unindent } from '@mimickal/discord-logging';
-const lodash = require('lodash');
+import lodash from 'lodash';
 
-const commands = require('./commands');
+import commands from './commands';
 const config = require('./config');
-const database = require('./database');
+import * as database from './database';
 import UserMutex from './mutex';
-const { emojiToKey } = require('./util');
+import { emojiToKey } from './util';
 
 const logger = GlobalLogger.logger;
 
