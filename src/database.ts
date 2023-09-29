@@ -134,7 +134,7 @@ export async function transaction<T>(
  * Wraps an {@link Error} to abort a transaction without the exception
  * bubbling up. See {@link transaction}.
  */
-class HandledError extends Error {
+export class HandledError extends Error {
 	constructor(cause: Error) {
 		super('Wrapped to abort transaction', { cause });
 	}
