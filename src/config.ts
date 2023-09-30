@@ -40,6 +40,7 @@ const CONFIG_TEMPLATE: Pick<EnvConfig, 'app'|'token'> = {
 // This looks pretty jank, but really all we're doing here is trying to have
 // sensible default config file locations.
 // This isn't perfect, but it covers most use cases, including default dev and prod.
+// Also, this is copy+pasted in knexfile.js
 const DEFAULT_CONFIG_LOCATION = process.env.NODE_ENV === 'prod'
 	? '/etc/discord/ReactionRoleBot/config.json'
 	: join(__dirname, '..', 'dev-config.json');
