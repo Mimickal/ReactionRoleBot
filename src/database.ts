@@ -466,17 +466,20 @@ export async function getMutexRoles(
 
 	// Roles could be added in either order, so fetch with both orders and
 	// combine the results.
-	const builder = maybeTrx<MutexRole>(Table.Mutex, trx);
-	const [rows1, rows2] = await Promise.all([
-		builder.select('role_id_1').where({
-			guild_id:  fields.guild_id,
+	const rows1 = await maybeTrx<MutexRole>(Table.Mutex, trx)
+		.select('role_id_1')
+		.where({
+			guild_id: fields.guild_id,
 			role_id_2: fields.role_id,
-		}),
-		builder.select('role_id_2').where({
-			guild_id:  fields.guild_id,
+		});
+
+	const rows2 = await maybeTrx<MutexRole>(Table.Mutex, trx)
+		.select('role_id_2')
+		.where({
+			guild_id: fields.guild_id,
 			role_id_1: fields.role_id,
-		}),
-	]);
+		});
+
 	return [
 		...rows1.map(row => row.role_id_1),
 		...rows2.map(row => row.role_id_2),
