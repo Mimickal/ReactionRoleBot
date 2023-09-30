@@ -7,7 +7,8 @@ src="https://www.gnu.org/graphics/agplv3-155x51.png">
 A Discord bot that can assign roles based on message reactions.<br/>
 [You can invite my live instance of the bot to your server with this link](
 https://discord.com/oauth2/authorize?client_id=692585944934514738&scope=applications.commands%20bot&permissions=335881280
-).
+).<br/>
+[Join the support server here](https://discord.gg/7UBT8SK).
 
 # Why this bot?
 Several other popular role-react bots exist, but many of them have some annoying
@@ -41,7 +42,7 @@ the channel with your role-react post, and have have following permissions:
 * **Manage roles** - To assign roles to users
 * **Read Message History** - To see posts in the channel before it joined
 * **Use External Emojis** - To use your custom emojis in role reacts
-* **Read Text Channels & See Voice Channels** - To see the role-react post
+* **View Channels** - To see the role-react post
 
 **Note:** These permissions may be inherited from your `@everyone` settings.
 
@@ -134,8 +135,11 @@ won't do anything, but you *could* do it...
 ## Hosting your own instance
 [See the guide here](docs/hosting.md).
 
-If you are upgrading from version 1.x, [see the migration guide](
+If you are upgrading from version 1.x to 2.x, [follow this migration guide](
 docs/migrate.md).
+
+If you are upgrading from version 2.x to 3.x, [follow this migration guide](
+docs/migrate3.md).
 
 ## License
 Copyright 2020 [Mimickal](https://github.com/Mimickal)
