@@ -1,10 +1,22 @@
-const { Mutex } = require('async-mutex');
+/*******************************************************************************
+ * This file is part of No BS Role Reacts, a role-assigning Discord bot.
+ * Copyright (C) 2020 Mimickal (Mia Moretti).
+ *
+ * No BS Role Reacts is free software under the GNU Affero General Public
+ * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
+ * for more information.
+ ******************************************************************************/
+import { Mutex } from 'async-mutex';
+import { GuildMember, PartialUser, Snowflake, User } from 'discord.js';
+import { GlobalLogger, stringify } from '@mimickal/discord-logging';
 
-const logger = require('./logger');
-const { stringify } = require('./util');
+const logger = GlobalLogger.logger;
 
 // TODO consider parameterizing this if we ever pull this out to a library.
 const TIMEOUT = 5000;
+
+// We just need user IDs, so any of these will do.
+type AnyUser = GuildMember | PartialUser | User;
 
 /**
  * A Mutex that knows how many things are waiting to acquire it.
@@ -35,16 +47,16 @@ class ReferenceCountMutex extends Mutex {
  * An internal timer is used to automatically unlock a user after a few seconds.
  * Callers should still always explicitly unlock users whenever possible.
  */
-class UserMutex {
-	#mutexes = new Map();
-	#lock_timers = new Map();
+export default class UserMutex {
+	#mutexes = new Map<Snowflake, ReferenceCountMutex>();
+	#lock_timers = new Map<Snowflake, NodeJS.Timeout>();
 
-	async lock(user) {
+	async lock(user: AnyUser) {
 		const key = user.id;
 		if (!this.#mutexes.has(key)) {
 			this.#mutexes.set(key, new ReferenceCountMutex());
 		}
-		const mutex = this.#mutexes.get(key);
+		const mutex = this.#mutexes.get(key)!;
 
 		logger.debug(`Locking ${stringify(user)} (refs: ${mutex.ref_count}) (${caller(3)})`);
 		await mutex.acquire();
@@ -55,16 +67,17 @@ class UserMutex {
 		);
 	}
 
-	unlock(user) {
+	unlock(user: AnyUser) {
 		this.#_unlock(user);
 	}
 
 	// Disallow external callers from setting timed_out
-	#_unlock(user, timed_out=false) {
+	#_unlock(user: AnyUser, timed_out=false) {
 		const key = user.id;
 
 		// Clearing timers is idempotent, so always do this first
-		clearTimeout(this.#lock_timers.get(key));
+		// https://stackoverflow.com/a/50428377
+		clearTimeout(this.#lock_timers.get(key) as unknown as number);
 		this.#lock_timers.delete(key);
 
 		// Make unlock idempotent too
@@ -72,10 +85,10 @@ class UserMutex {
 			logger.debug(`Extraneous unlock on ${stringify(user)} (${caller(4)})`);
 			return;
 		}
-		const mutex = this.#mutexes.get(key);
+		const mutex = this.#mutexes.get(key)!;
 
 		// Falling back on a timeout for unlock is not inherently an error, but
-		// it can sometimes be prevented with a programming change up the chain.
+		// we want to report it in case they're consistently happening somewhere.
 		const log_msg = `Unlocking ${stringify(user)} (refs: ${mutex.ref_count})`;
 		if (timed_out) {
 			logger.warn(`${log_msg} after timeout`);
@@ -93,10 +106,10 @@ class UserMutex {
 }
 
 // Get the calling function's name
-function caller(depth) {
-	const call_line = new Error().stack.split('\n').slice(depth, depth + 1).pop();
-	const match = call_line.match(/\s*at ([\w.]+)/);
-	return match[1];
+function caller(depth: number): string {
+	const call_line = new Error().stack?.split('\n').slice(depth, depth + 1).pop();
+	const match = call_line?.match(/\s*at ([\w.]+)/);
+	return match?.[1] ?? '<Failed to determine caller>';
 }
 
 module.exports = UserMutex;

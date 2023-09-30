@@ -6,20 +6,32 @@
  * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
  * for more information.
  ******************************************************************************/
-const lodash = require('lodash');
-const Perms = require('discord.js').Permissions.FLAGS;
+import {
+	BaseInteraction,
+	ChannelType,
+	Client,
+	Collection,
+	Guild,
+	GuildMember,
+	Message,
+	MessageReaction,
+	PartialGuildMember,
+	PartialMessage,
+	PartialMessageReaction,
+	PartialUser,
+	PermissionFlagsBits,
+	User,
+} from 'discord.js';
+import { GlobalLogger, detail, stringify, unindent } from '@mimickal/discord-logging';
+import lodash from 'lodash';
 
-const commands = require('./commands');
-const config = require('./config');
-const database = require('./database');
-const UserMutex = require('./mutex');
-const logger = require('./logger');
-const {
-	detail,
-	emojiToKey,
-	stringify,
-	unindent,
-} = require('./util');
+import commands from './commands';
+import { Config } from './config';
+import * as database from './database';
+import UserMutex from './mutex';
+import { emojiToKey } from './util';
+
+const logger = GlobalLogger.logger;
 
 /**
  * Allows us to "lock" a user to prevent multiple events from trying to update
@@ -37,21 +49,21 @@ const {
  */
 const USER_MUTEX = new UserMutex();
 
-const REQUIRED_PERMISSIONS = Object.freeze({
-	[Perms.ADD_REACTIONS]:        'Add Reactions',
-	[Perms.MANAGE_MESSAGES]:      'Manage Messages',
-	[Perms.MANAGE_ROLES]:         'Manage Roles',
-	[Perms.READ_MESSAGE_HISTORY]: 'Read Message History',
-	[Perms.USE_EXTERNAL_EMOJIS]:  'Use External Emojis',
-	[Perms.VIEW_CHANNEL]:         'Read Text Channels & See Voice Channels',
-});
+const REQUIRED_PERMISSIONS: [bigint, string][] = [
+	[PermissionFlagsBits.AddReactions,       'Add Reactions'],
+	[PermissionFlagsBits.ManageMessages,     'Manage Messages'],
+	[PermissionFlagsBits.ManageRoles,        'Manage Roles'],
+	[PermissionFlagsBits.ReadMessageHistory, 'Read Message History'],
+	[PermissionFlagsBits.UseExternalEmojis,  'Use External Emojis'],
+	[PermissionFlagsBits.ViewChannel,        'View Channels'],
+];
 
 /**
  * Event handler for when the bot joins a new guild.
  * DMs the guild owner with some basic instructions, including any missing
  * required permissions.
  */
-async function onGuildJoin(guild) {
+export async function onGuildJoin(guild: Guild): Promise<void> {
 	logger.info(`Joined ${stringify(guild)}`);
 
 	let text = unindent(`
@@ -66,7 +78,7 @@ async function onGuildJoin(guild) {
 	// These permissions can also be inherited from the server's @everyone
 	// permissions.
 	const client_member = await guild.members.fetch(guild.client.user);
-	const missing_perms = Object.entries(REQUIRED_PERMISSIONS)
+	const missing_perms = REQUIRED_PERMISSIONS
 		.filter(([ perm, name ]) => !client_member.permissions.has(perm, true))
 		.map(([ perm, name ]) => name);
 
@@ -84,14 +96,14 @@ async function onGuildJoin(guild) {
 
 	const guild_owner = await guild.fetchOwner();
 	const owner_dm = await guild_owner.createDM();
-	return owner_dm.send(text);
+	await owner_dm.send(text);
 }
 
 /**
  * Event handler for when the bot leaves (or is kicked from) a guild.
  * Deletes all data associated with that guild.
  */
-async function onGuildLeave(guild) {
+export async function onGuildLeave(guild: Guild): Promise<void> {
 	try {
 		await database.clearGuildInfo(guild.id)
 		logger.info(`Left ${stringify(guild)}, deleted all related data`);
@@ -107,7 +119,10 @@ async function onGuildLeave(guild) {
  *
  * See docs for: {@link USER_MUTEX}
  */
-async function onGuildMemberUpdate(old_member, new_member) {
+export async function onGuildMemberUpdate(
+	old_member: GuildMember | PartialGuildMember,
+	new_member: GuildMember,
+): Promise<void> {
 	USER_MUTEX.unlock(new_member);
 }
 
@@ -115,8 +130,10 @@ async function onGuildMemberUpdate(old_member, new_member) {
  * Event handler for receiving some kind of interaction.
  * Logs the interaction and passes it on to the command handler.
  */
-async function onInteraction(interaction) {
+export async function onInteraction(interaction: BaseInteraction): Promise<void> {
 	logger.info(`Received ${detail(interaction)}`);
+
+	// TODO ignore interactions outside of guilds
 
 	try {
 		await commands.execute(interaction);
@@ -129,10 +146,11 @@ async function onInteraction(interaction) {
  * Event handler for when messages are deleted in bulk.
  * Removes any react roles configured for the deleted messages.
  */
-async function onMessageBulkDelete(messages) {
-	for (const message of messages.values()) {
-		console.log(message.id);
-		onMessageDelete(message);
+export async function onMessageBulkDelete(
+	messages: Collection<string, Message<boolean> | PartialMessage>
+): Promise<void> {
+	for await (const message of messages.values()) {
+		await onMessageDelete(message);
 	}
 }
 
@@ -140,7 +158,9 @@ async function onMessageBulkDelete(messages) {
  * Event handler for when a message is deleted.
  * Removes any react-roles configured for the deleted message.
  */
-async function onMessageDelete(message) {
+export async function onMessageDelete(
+	message: Message<boolean> | PartialMessage
+): Promise<void> {
 	try {
 		const removed = await database.removeAllRoleReacts(message.id);
 		if (removed) {
@@ -157,15 +177,18 @@ async function onMessageDelete(message) {
  * If so, adds that role (or roles) to the user who added the reaction.
  * Removes any reaction that doesn't correspond to a role.
  */
-async function onReactionAdd(reaction, react_user) {
+export async function onReactionAdd(
+	reaction: MessageReaction | PartialMessageReaction,
+	react_user: User | PartialUser,
+): Promise<void> {
 	logger.debug(`Added ${detail(reaction)}`);
 
-	// Ignore our own reactions
-	if (react_user === react_user.client.user) {
+	// Ignore reactions initiated by this bot.
+	if (react_user.id === react_user.client.user.id) {
 		return;
 	}
 
-	// Ignore reactions on non-role-react posts
+	// Ignore reactions on non-role-react posts.
 	if (!await database.isRoleReactMessage(reaction.message.id)) {
 		return;
 	}
@@ -175,18 +198,29 @@ async function onReactionAdd(reaction, react_user) {
 		emoji_id: emojiToKey(reaction.emoji),
 	});
 
-	// Someone added an emoji that isn't mapped to a role
+	// This is a role-react message, but the added react is not mapped to a role
+	// (e.g. someone manually added a reaction).
 	if (role_ids.length === 0) {
-		return reaction.remove();
+		await reaction.remove();
+		return;
 	}
 
-	const member = await reaction.message.guild.members.fetch(react_user.id);
+	const message = await reaction.message.fetch();
+	const guild = message.guild;
+
+	// Ignore reactions on non-guild messages. This is for static type safety.
+	// If the above checks pass, this should never happen.
+	if (!guild) {
+		return;
+	}
+
+	const member = await guild.members.fetch(react_user.id);
 
 	// Remove mutually exclusive roles from user
 	// FIXME this database call should optionally take an array
 	const mutex_roles = lodash.flatMap(
 		await Promise.all(role_ids.map(role_id => database.getMutexRoles({
-			guild_id: reaction.message.guild.id,
+			guild_id: guild.id,
 			role_id: role_id,
 		})))
 	);
@@ -203,7 +237,7 @@ async function onReactionAdd(reaction, react_user) {
 	for await (const emoji of mutex_emojis) {
 		const mutex_reaction = reaction.message.reactions.resolve(emoji);
 		if (mutex_reaction) {
-			mutex_reaction.users.remove(react_user);
+			mutex_reaction.users.remove(react_user.id);
 		}
 	}
 
@@ -222,43 +256,62 @@ async function onReactionAdd(reaction, react_user) {
  * NOTE:
  * This is only fired when a single reaction is removed, either by clicking on
  * an emoji or through the message's "reactions" context menu. It is NOT fired
- * when a bot removes all reactions (Discord uses a seprate event for that).
+ * when a bot removes all reactions (Discord uses a separate event for that).
  *
  * The user this handler receives is the user whose reaction was removed.
  * Discord does not tell us who actually removed that user's reaction. We can't
  * tell when an admin removes a reaction instead of the user themselves, so this
  * handler will always just remove the role from the user.
  */
-async function onReactionRemove(reaction, react_user) {
-	logger.debug(`Removed ${detail(reaction)}`);
-
+export async function onReactionRemove(
+	reaction: MessageReaction | PartialMessageReaction,
+	react_user: User | PartialUser,
+): Promise<void> {
 	// TODO Maybe be a little smarter about how we remove roles when multiple
 	// emojis map to that role. Currently we remove the roll when a single emoji
 	// mapped to it is removed. Maybe we should wait until all emojis mapped to
 	// it are removed?
 
+	logger.debug(`Removed ${detail(reaction)}`);
+
 	const emoji = reaction.emoji;
+
+	// DON'T ignore this bot's reaction being removed!
+	if (react_user.id === react_user.client.user.id) {
+		logger.info(`Replacing removed bot reaction ${stringify(emoji)}`);
+		await reaction.message.react(emoji);
+		return;
+	}
+
+	// Ignore reactions on non-role-react posts.
+	if (!await database.isRoleReactMessage(reaction.message.id)) {
+		return;
+	}
 
 	const role_ids = await database.getRoleReacts({
 		message_id: reaction.message.id,
 		emoji_id: emojiToKey(emoji),
 	});
 
-	// Ignore reactions on non-role-react posts
+	// This is a role-react message, but the removed react is not mapped to a role
+	/** (e.g. this event is fired when {@link onReactionAdd} removes a manually added react).*/
 	if (role_ids.length === 0) {
 		return;
 	}
 
-	if (react_user === react_user.client.user) {
-		logger.info(`Replacing removed bot reaction ${stringify(emoji)}`);
-		return reaction.message.react(emoji);
+	const guild = (await reaction.message.fetch()).guild;
+
+	// Ignore reactions on non-guild messages. This is for static type safety.
+	// If the above checks pass, this should never happen.
+	if (!guild) {
+		return;
 	}
 
 	await USER_MUTEX.lock(react_user); // see USER_MUTEX comment
 	try {
-		const member = await reaction.message.guild.members.fetch(react_user.id);
+		const member = await guild.members.fetch(react_user.id);
 
-		// onGuildMemberUpdate won't fire if we don't actually change roles
+		/** {@link onGuildMemberUpdate} won't fire if we don't actually change roles */
 		if (!role_ids.some(role_id => member.roles.cache.has(role_id))) {
 			USER_MUTEX.unlock(react_user);
 			return;
@@ -279,10 +332,10 @@ async function onReactionRemove(reaction, react_user) {
  *
  * Logs the bot user we logged in as.
  */
-async function onReady(client) {
+export async function onReady(client: Client<true>): Promise<void> {
 	logger.info(`Logged in as ${client.user.tag} (${client.user.id})`);
 
-	if (config.enable_precache) {
+	if (Config.enable_precache) {
 		logger.warn(unindent(`
 			Precaching is VERY hard on Discord's API and will cause the bot to
 			get rate limited, unless the bot is only in very few servers. Use
@@ -300,7 +353,7 @@ async function onReady(client) {
  * bot to get rate limited if it's in too many servers. This really shouldn't be
  * used.
  */
-async function precache(client) {
+async function precache(client: Client<true>): Promise<void> {
 	logger.info('Precaching messages...');
 
 	// Despite message IDs being unique, we can only fetch a message by ID
@@ -309,20 +362,25 @@ async function precache(client) {
 	let numCached = 0;
 	await Promise.all(client.guilds.cache.map(async guild => {
 		const guild_message_ids = await database.getRoleReactMessages(guild.id);
-		let errors = {}; // Allows us to aggregate and report errors
+		let errors: Record<string, number> = {}; // Allows us to aggregate and report errors
 
 		await Promise.all(guild.channels.cache.map(async channel => {
+			if (channel.type !== ChannelType.GuildText) {
+				return;
+			}
+
 			await Promise.all(guild_message_ids.map(async id => {
 				try {
 					if (await channel.messages?.fetch(id)) {
 						numCached++;
 					}
 				} catch (err) {
-					if (err.message.includes('Unknown Message')) {
+					const message = (err as Error).message;
+					if (message.includes('Unknown Message')) {
 						return; // Expected when message isn't in this channel
 					} else {
-						errors[err.message] ??= 0;
-						errors[err.message]++;
+						errors[message] ??= 0;
+						errors[message]++;
 					}
 				}
 			}));
@@ -337,16 +395,3 @@ async function precache(client) {
 
 	logger.info(`Finished pre-cache (${numCached} messages)`);
 }
-
-module.exports = {
-	onGuildJoin,
-	onGuildLeave,
-	onGuildMemberUpdate,
-	onInteraction,
-	onMessageBulkDelete,
-	onMessageDelete,
-	onReactionAdd,
-	onReactionRemove,
-	onReady,
-};
-

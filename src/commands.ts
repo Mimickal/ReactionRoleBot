@@ -24,34 +24,43 @@
 //     failure.
 //     The only exception to this is committing an active database transaction.
 
-const {
-	ApplicationCommandType,
-	Options,
+import {
+	getEmoji,
+	Handler,
 	SlashCommandRegistry,
+	WithGuild,
+} from 'discord-command-registry';
+import {
+	ApplicationCommandType,
 	bold,
+	ChannelType,
+	ChatInputCommandInteraction,
 	codeBlock,
+	CommandInteraction,
+	ContextMenuCommandInteraction,
+	Message,
+	PermissionFlagsBits,
+	Role,
 	roleMention,
-} = require('discord-command-registry');
-const Discord = require('discord.js');
-const NodeCache = require('node-cache');
-
-const database = require('./database');
-const { rethrowHandled } = database;
-const info = require('../package.json');
-const logger = require('./logger');
-const {
+	Snowflake,
+} from 'discord.js';
+import {
+	GlobalLogger,
 	asLines,
-	emojiToKey,
-	entries,
-	ephemEdit,
-	ephemReply,
 	stringify,
 	unindent,
-} = require('./util');
+} from '@mimickal/discord-logging';
+import Multimap from 'multimap';
+import NodeCache from 'node-cache';
 
+import { Package } from './config';
+import * as database from './database';
+import { emojiToKey, entries, ephemEdit, ephemReply } from './util';
+
+const logger = GlobalLogger.logger;
 
 const ONE_HOUR_IN_SECONDS = 60*60;
-const CACHE_SETTINGS = {
+const CACHE_SETTINGS: NodeCache.Options = {
 	stdTTL: ONE_HOUR_IN_SECONDS,
 	checkperiod: ONE_HOUR_IN_SECONDS,
 	useClones: false,
@@ -228,12 +237,20 @@ const REGISTRY = new SlashCommandRegistry()
 /**
  * Middleware for command handlers that ensures the user initiating an
  * interaction has permission to do so, and short-circuits if they don't.
+ *
+ * Using this requires the handler accepts {@link WithGuild} interactions.
  */
-function requireAuth(handler) {
-	return async function(interaction) {
+function requireAuth<T extends CommandInteraction>(
+	handler: Handler<WithGuild<T>>
+): Handler<T> {
+	return async function(interaction: T): Promise<unknown> {
+		if (!interaction.inCachedGuild()) {
+			return ephemReply(interaction, 'This command only works in a guild!');
+		}
+
 		const member = await interaction.member.fetch(); // Ensures cache
 
-		if (member.permissions.has(Discord.Permissions.FLAGS.ADMINISTRATOR)) {
+		if (member.permissions.has(PermissionFlagsBits.Administrator)) {
 			return handler(interaction);
 		}
 
@@ -243,24 +260,24 @@ function requireAuth(handler) {
 		}
 
 		return ephemReply(interaction, "You don't have permission to use that!");
-	}
+	};
 }
 
 /**
  * Replies with info about this bot, including a link to the source code to be
  * compliant with the AGPLv3 this bot is licensed under.
  */
-async function cmdInfo(interaction) {
+async function cmdInfo(interaction: ChatInputCommandInteraction): Promise<void> {
 	const stats = await database.getMetaStats();
-	return interaction.reply(asLines([
-		info.description,
-		`${bold('Running version:')} ${info.version}`,
-		`${bold('Source code:')} ${info.homepage}`,
+	await interaction.reply(asLines([
+		Package.description,
+		`${bold('Running version:')} ${Package.version}`,
+		`${bold('Source code:')} ${Package.homepage}`,
 		'',
 		codeBlock(asLines([
 			'Stats For Nerds:',
 			`  - Servers bot is active in: ${stats.guilds}`,
-			`  - Reaction role mappings:   ${stats.roles}`,
+			`  - Reaction role mappings:   ${stats.mappings}`,
 			`  - Total role assignments:   ${stats.assignments}`,
 		])),
 	]));
@@ -269,27 +286,34 @@ async function cmdInfo(interaction) {
 /**
  * Saves a user's selected message for subsequent actions.
  */
-async function cmdSelect(interaction) {
+async function cmdSelect(
+	interaction: WithGuild<ContextMenuCommandInteraction>
+): Promise<void> {
 	const message = _selectCommon(interaction, SELECTED_MESSAGE_CACHE);
-	return ephemReply(interaction, `Selected message: ${message.url}`);
+	await ephemReply(interaction, `Selected message: ${message.url}`);
 }
 
 /**
  * Saves a user's selected clone target message for subsequent clone.
  */
-async function cmdSelectCopy(interaction) {
+async function cmdSelectCopy(
+	interaction: WithGuild<ContextMenuCommandInteraction>
+): Promise<void> {
 	const message = _selectCommon(interaction, CLONE_MESSAGE_CACHE);
-	return ephemReply(interaction, `Selected copy target: ${message.url}`);
+	await ephemReply(interaction, `Selected copy target: ${message.url}`);
 }
 
 // Common logic between cmdSelect and cmdSelectClone
-function _selectCommon(interaction, cache) {
+function _selectCommon(
+	interaction: WithGuild<ContextMenuCommandInteraction>,
+	cache: NodeCache,
+): Message<boolean> {
 	const user    = interaction.user;
 	const message = interaction.options.getMessage('message', true);
 
 	// Always clear selected message first, just to be safe and consistent.
 	cache.del(user.id);
-	cache.set(user.id, message);
+	cache.set<Message<boolean>>(user.id, message);
 
 	return message;
 }
@@ -298,10 +322,12 @@ function _selectCommon(interaction, cache) {
  * An alternative way to select messages using slash commands instead of context
  * menus, since Discord mobile does not currently support context menus.
  */
-async function cmdSelectMobile(interaction) {
+async function cmdSelectMobile(
+	interaction: WithGuild<ChatInputCommandInteraction>
+): Promise<void> {
 	const url = await _selectCloneCommon(interaction, SELECTED_MESSAGE_CACHE);
 	if (url) {
-		return ephemReply(interaction, `Selected message: ${url}`);
+		await ephemReply(interaction, `Selected message: ${url}`);
 	}
 }
 
@@ -309,25 +335,31 @@ async function cmdSelectMobile(interaction) {
  * An alternative way to select clone target messages using slash commands
  * instead of context menus.
  */
-async function cmdSelectCopyMobile(interaction) {
+async function cmdSelectCopyMobile(
+	interaction: WithGuild<ChatInputCommandInteraction>
+): Promise<void> {
 	const url = await _selectCloneCommon(interaction, CLONE_MESSAGE_CACHE);
 	if (url) {
-		return ephemReply(interaction, `Selected copy target: ${url}`);
+		await ephemReply(interaction, `Selected copy target: ${url}`);
 	}
 }
 
 // Common logic between cmdSelectMobile and cmdSelectCloneMobile
-async function _selectCloneCommon(interaction, cache) {
-	function reportInvalid(err) {
+async function _selectCloneCommon(
+	interaction: WithGuild<ChatInputCommandInteraction>,
+	cache: NodeCache,
+): Promise<string | undefined> {
+	async function reportInvalid(err?: Error): Promise<void> {
 		logger.warn('Failed to select message by URL', err);
-		return ephemReply(interaction, 'Invalid message link!');
+		await ephemReply(interaction, 'Invalid message link!');
 	}
 
 	const url = interaction.options.getString('message-url', true);
 	const match = url.match(/^https:\/\/discord\.com\/channels\/\d+\/(\d+)\/(\d+)$/);
 
 	if (!match) {
-		return reportInvalid();
+		reportInvalid();
+		return;
 	}
 
 	const channel_id = match[1];
@@ -335,10 +367,15 @@ async function _selectCloneCommon(interaction, cache) {
 
 	let message;
 	try {
-		const channel = await interaction.guild.channels.fetch(channel_id);
+		const channel = await interaction.guild!.channels.fetch(channel_id);
+		if (!channel || channel.type !== ChannelType.GuildText) {
+			throw new Error('Not a text channel!');
+		}
+
 		message = await channel?.messages.fetch(message_id);
 	} catch (err) {
-		return reportInvalid(err);
+		reportInvalid(err as Error);
+		return;
 	}
 
 	cache.del(interaction.user.id);
@@ -350,9 +387,12 @@ async function _selectCloneCommon(interaction, cache) {
 /**
  * Shows a user their currently selected message.
  */
-async function cmdSelected(interaction) {
-	const message = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
-	return ephemReply(interaction, message
+async function cmdSelected(
+	interaction: WithGuild<ChatInputCommandInteraction>
+): Promise<void> {
+	// TODO would be nice if the cache tracked its own type. This isn't safe.
+	const message = SELECTED_MESSAGE_CACHE.get<Message>(interaction.user.id);
+	await ephemReply(interaction, message
 		? `Currently selected: ${message.url}`
 		: 'No message currently selected'
 	);
@@ -361,9 +401,12 @@ async function cmdSelected(interaction) {
 /**
  * Shows a user their currently selected copy target message.
  */
-async function cmdSelectedCopy(interaction) {
-	const message = CLONE_MESSAGE_CACHE.get(interaction.user.id);
-	return ephemReply(interaction, message
+async function cmdSelectedCopy(
+	interaction: WithGuild<ChatInputCommandInteraction>
+): Promise<void> {
+	// TODO would be nice if the cache tracked its own type. This isn't safe.
+	const message = CLONE_MESSAGE_CACHE.get<Message>(interaction.user.id);
+	await ephemReply(interaction, message
 		? `Current copy target: ${message.url}`
 		: 'No copy target message currently selected'
 	);
@@ -372,30 +415,37 @@ async function cmdSelectedCopy(interaction) {
 /**
  * Map an emoji reaction with a role on the currently selected message.
  */
-async function cmdRoleAdd(interaction) {
-	const emoji   = Options.getEmoji(interaction, 'emoji', true);
-	const role    = interaction.options.getRole('role', true);
-	let   message = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
+async function cmdRoleAdd(
+	interaction: WithGuild<ChatInputCommandInteraction>
+): Promise<void> {
+	const emoji = getEmoji(interaction, 'emoji', true);
+	const role  = interaction.options.getRole('role', true);
 
-	if (!message) {
-		return ephemReply(interaction, 'No message selected! Select a message first.');
+	const cached_message = SELECTED_MESSAGE_CACHE.get<Message>(interaction.user.id);
+	if (!cached_message) {
+		await ephemReply(interaction, 'No message selected! Select a message first.');
+		return
 	}
 
 	if (!emoji) {
-		return ephemReply(interaction, 'Not a valid emoji!');
+		await ephemReply(interaction, 'Not a valid emoji!');
+		return
 	}
 
-	message = await message.fetch();
+	const message = await cached_message.fetch();
 
 	// Prevent someone from modifying a server from outside the server.
-	if (interaction.guild !== message.guild || interaction.guild !== role.guild) {
-		return ephemReply(interaction, unindent(`
+	if (interaction.guild.id !== message.guild?.id ||
+		interaction.guild.id !== (role as Role)?.guild.id
+	) {
+		await ephemReply(interaction, unindent(`
 			Message and Role need to be in the same Server this command
 			was issued from!
 		`));
+		return;
 	}
 
-	return database.transaction(async trx => {
+	await database.transaction(async trx => {
 		const emoji_key = emojiToKey(emoji);
 
 		const mapping = await database.getRoleReactMap(message.id, trx);
@@ -407,11 +457,12 @@ async function cmdRoleAdd(interaction) {
 			const conflicting = mutex_roles.filter(
 				mrole_id => mapping.has(emoji_key, mrole_id)
 			);
-			return await ephemReply(interaction, unindent(`
+			await ephemReply(interaction, unindent(`
 				Cannot add emoji-role mapping because it conflicts with mutually
 				exclusive roles mapped to this emoji! Conflicting roles:
 				${conflicting.map(mrole_id => roleMention(mrole_id)).join(', ')}
 			`));
+			return;
 		}
 
 		const db_data = {
@@ -426,7 +477,7 @@ async function cmdRoleAdd(interaction) {
 		} catch (err) {
 			logger.error(`Database failed to create ${stringify(db_data)}`, err);
 			await ephemReply(interaction, 'Something went wrong. Try again?');
-			rethrowHandled(err);
+			throw new database.HandledError(err as Error);
 		}
 
 		try {
@@ -436,13 +487,13 @@ async function cmdRoleAdd(interaction) {
 			await ephemReply(interaction,
 				'I could not react to your selected message. Do I have the right permissions?'
 			);
-			rethrowHandled(err);
+			throw new database.HandledError(err as Error);
 		}
 
 		let response = `Mapped ${emoji} to ${role} on ${stringify(message)}`;
 		const also_mapped = entries(mapping)
 			.filter(([eid, rid]) => eid !== emoji_key && rid === role.id)
-			.map(([eid, _]) => message.reactions.resolve(eid).emoji);
+			.map(([eid, _]) => message.reactions.resolve(eid)?.emoji);
 		if (also_mapped.length > 0) {
 			response += `\nNote: also mapped to ${also_mapped.join(' ')}`;
 		}
@@ -453,26 +504,30 @@ async function cmdRoleAdd(interaction) {
 /**
  * Removes an emoji mapping from the currently selected message.
  */
-async function cmdRoleRemove(interaction) {
-	const emoji   = Options.getEmoji(interaction, 'emoji', false);
-	const role    = interaction.options.getRole('role', false);
-	let   message = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
+async function cmdRoleRemove(
+	interaction: WithGuild<ChatInputCommandInteraction>
+): Promise<void> {
+	const emoji = getEmoji(interaction, 'emoji', false);
+	const role  = interaction.options.getRole('role', false);
 
-	if (!message) {
-		return ephemReply(interaction, 'No message selected! Select a message first.');
+	const cached_message = SELECTED_MESSAGE_CACHE.get<Message>(interaction.user.id);
+	if (!cached_message) {
+		await ephemReply(interaction, 'No message selected! Select a message first.');
+		return;
 	}
 
 	if (!emoji && !role) {
-		return ephemReply(interaction, 'You must specify an emoji or a role (or both)!');
+		await ephemReply(interaction, 'You must specify an emoji or a role (or both)!');
+		return;
 	}
 
-	message = await message.fetch();
+	const message = await cached_message.fetch();
 
-	return database.transaction(async trx => {
+	await database.transaction(async trx => {
 		// Need to reply to keep the interaction token alive while we delete
 		await ephemReply(interaction, 'Removing, this may take a moment...');
 
-		let map_before;
+		let map_before: Multimap<string, Snowflake>;
 		const db_data = {
 			message_id: message.id,
 			emoji_id:   emoji ? emojiToKey(emoji) : undefined,
@@ -485,10 +540,10 @@ async function cmdRoleRemove(interaction) {
 		} catch (err) {
 			logger.error(`Database failed to remove mappings ${stringify(db_data)}`, err);
 			await ephemEdit(interaction, 'Something went wrong. Try again?');
-			rethrowHandled(err);
+			throw new database.HandledError(err as Error);
 		}
 
-		let map_after;
+		let map_after: Multimap<string, Snowflake>;
 		try {
 			map_after = await database.getRoleReactMap(message.id, trx);
 			await Promise.all(message.reactions.cache
@@ -499,7 +554,7 @@ async function cmdRoleRemove(interaction) {
 			await ephemEdit(interaction,
 				'I could not remove the react(s). Do I have the right permissions?'
 			);
-			rethrowHandled(err);
+			throw new database.HandledError(err as Error);
 		}
 
 		entries(map_after).forEach(
@@ -523,16 +578,19 @@ async function cmdRoleRemove(interaction) {
  * Removes all emoji mappings from the currently selected message.
  * This remains a separate function to avoid accidentally nuking a message.
  */
-async function cmdRoleRemoveAll(interaction) {
-	let message = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
+async function cmdRoleRemoveAll(
+	interaction: WithGuild<ChatInputCommandInteraction>
+): Promise<void> {
+	const cached_message = SELECTED_MESSAGE_CACHE.get<Message>(interaction.user.id);
 
-	if (!message) {
-		return ephemReply(interaction, 'No message selected! Select a message first.');
+	if (!cached_message) {
+		await ephemReply(interaction, 'No message selected! Select a message first.');
+		return;
 	}
 
-	message = await message.fetch();
+	const message = await cached_message.fetch();
 
-	return database.transaction(async trx => {
+	await database.transaction(async trx => {
 		let removed;
 		try {
 			removed = await database.removeAllRoleReacts(message.id, trx);
@@ -542,10 +600,10 @@ async function cmdRoleRemoveAll(interaction) {
 			await ephemReply(interaction,
 				'I could not remove the reacts. Do I have the right permissions?'
 			);
-			rethrowHandled(err);
+			throw new database.HandledError(err as Error);
 		}
 
-		return ephemReply(interaction,
+		await ephemReply(interaction,
 			removed
 				? `Removed all react roles from ${stringify(message)}`
 				: `Selected message does not have any role reactions! ${message.url}`
@@ -556,11 +614,14 @@ async function cmdRoleRemoveAll(interaction) {
 /**
  * Adds a role that can configure this bot's settings for a guild.
  */
-async function cmdPermAdd(interaction) {
+async function cmdPermAdd(
+	interaction: WithGuild<ChatInputCommandInteraction>
+): Promise<void> {
 	const role = interaction.options.getRole('role', true);
 
-	if (interaction.guild !== role.guild) {
-		return ephemReply(interaction, 'Role must belong to this guild!');
+	if (interaction.guild.id !== (role as Role)?.guild.id) {
+		await ephemReply(interaction, 'Role must belong to this guild!');
+		return;
 	}
 
 	try {
@@ -569,26 +630,30 @@ async function cmdPermAdd(interaction) {
 			role_id: role.id,
 		});
 	} catch (err) {
-		if (err.message.includes('UNIQUE constraint failed')) {
-			return ephemReply(interaction, `${role} can already configure me!`);
+		if ((err as Error).message.includes('UNIQUE constraint failed')) {
+			await ephemReply(interaction, `${role} can already configure me!`);
 		} else {
 			logger.error(`Could not add permission for ${stringify(role)}`, err);
-			return ephemReply(interaction, 'Something went wrong. Try again?');
+			await ephemReply(interaction, 'Something went wrong. Try again?');
 		}
+		return;
 	}
 
-	return ephemReply(interaction, `${role} can now configure me`);
+	await ephemReply(interaction, `${role} can now configure me`);
 }
 
 /**
  * Removes a role from being able to configure this bot's settings for a guild.
  * A role can remove itself, which is dumb, but whatever.
  */
-async function cmdPermRemove(interaction) {
+async function cmdPermRemove(
+	interaction: WithGuild<ChatInputCommandInteraction>
+): Promise<void> {
 	const role = interaction.options.getRole('role', true);
 
-	if (interaction.guild !== role.guild) {
-		return ephemReply(interaction, 'Role must belong to this guild!');
+	if (interaction.guild.id !== (role as Role)?.guild.id) {
+		await ephemReply(interaction, 'Role must belong to this guild!');
+		return;
 	}
 
 	let removed;
@@ -599,10 +664,11 @@ async function cmdPermRemove(interaction) {
 		});
 	} catch (err) {
 		logger.error(`Could not remove permission for ${stringify(role)}`, err);
-		return ephemReply(interaction, 'Something went wrong. Try again?');
+		await ephemReply(interaction, 'Something went wrong. Try again?');
+		return;
 	}
 
-	return ephemReply(interaction,
+	await ephemReply(interaction,
 		`${role} ${
 			removed === 1 ? 'is no longer' : 'was already not'
 		} allowed to configure me`
@@ -613,18 +679,24 @@ async function cmdPermRemove(interaction) {
  * Make two roles mutually exclusive for a guild.
  * This is for the whole guild, not just a single message.
  */
-async function cmdMutexAdd(interaction) {
+async function cmdMutexAdd(
+	interaction: WithGuild<ChatInputCommandInteraction>
+): Promise<void> {
 	const role1 = interaction.options.getRole('role1', true);
 	const role2 = interaction.options.getRole('role2', true);
 
-	if (interaction.guild !== role1.guild || interaction.guild != role2.guild) {
-		return ephemReply(interaction, 'Roles must belong to this guild!');
+	if (interaction.guild.id !== (role1 as Role)?.guild.id ||
+		interaction.guild.id !== (role2 as Role)?.guild.id
+	) {
+		await ephemReply(interaction, 'Roles must belong to this guild!');
+		return;
 	}
 
 	if (role1 === role2) {
-		return ephemReply(interaction,
+		await ephemReply(interaction,
 			'Cannot make a role mutually exclusive with itself!'
 		);
+		return;
 	}
 
 	try {
@@ -634,8 +706,8 @@ async function cmdMutexAdd(interaction) {
 			role_id_2: role2.id,
 		});
 	} catch (err) {
-		if (err.message.includes('UNIQUE constraint failed')) {
-			return ephemReply(interaction,
+		if ((err as Error).message.includes('UNIQUE constraint failed')) {
+			await ephemReply(interaction,
 				`Roles ${role1} and ${role2} are already mutually exclusive!`
 			);
 		} else {
@@ -643,11 +715,12 @@ async function cmdMutexAdd(interaction) {
 				Could not make ${stringify(role1)} and ${stringify(role2)}
 				mutually exclusive
 			`), err);
-			return ephemReply(interaction, 'Something went wrong. Try again?');
+			await ephemReply(interaction, 'Something went wrong. Try again?');
 		}
+		return;
 	}
 
-	return ephemReply(interaction,
+	await ephemReply(interaction,
 		`Roles ${role1} and ${role2} are now mutually exclusive in this server`
 	);
 }
@@ -655,12 +728,17 @@ async function cmdMutexAdd(interaction) {
 /**
  * Removes the mutually exclusive restriction for two roles in a guild.
  */
-async function cmdMutexRemove(interaction) {
+async function cmdMutexRemove(
+	interaction: WithGuild<ChatInputCommandInteraction>
+): Promise<void> {
 	const role1 = interaction.options.getRole('role1', true);
 	const role2 = interaction.options.getRole('role2', true);
 
-	if (interaction.guild !== role1.guild || interaction.guild != role2.guild) {
-		return ephemReply(interaction, 'Roles must belong to this guild!');
+	if (interaction.guild.id !== (role1 as Role)?.guild.id ||
+		interaction.guild.id !== (role2 as Role)?.guild.id
+	) {
+		await ephemReply(interaction, 'Roles must belong to this guild!');
+		return;
 	}
 
 	let removed;
@@ -675,10 +753,11 @@ async function cmdMutexRemove(interaction) {
 			`Could not remove mutex for ${stringify(role1)} and ${stringify(role2)}`,
 			err
 		);
-		return ephemReply(interaction, 'Something went wrong. Try again?');
+		await ephemReply(interaction, 'Something went wrong. Try again?');
+		return
 	}
 
-	return ephemReply(interaction,
+	await ephemReply(interaction,
 		`Roles ${role1} and ${role2} ${
 			removed === 1 ? 'are no longer' : 'were already not'
 		} mutually exclusive`
@@ -689,57 +768,66 @@ async function cmdMutexRemove(interaction) {
  * Removes all data for a guild. This includes role react mappings, allowed
  * configuration roles, and mutually exclusive constraints on roles.
  */
-async function cmdReset(interaction) {
+async function cmdReset(
+	interaction: WithGuild<ChatInputCommandInteraction>
+): Promise<void> {
 	try {
 		await database.clearGuildInfo(interaction.guild.id);
 	} catch (err) {
 		logger.error(`Failed to clear data for ${stringify(interaction.guild)}`, err);
-		return ephemReply(interaction, 'Something went wrong. Try again?');
+		await ephemReply(interaction, 'Something went wrong. Try again?');
+		return;
 	}
 
-	return ephemReply(interaction, 'Deleted all configuration for this guild!');
+	await ephemReply(interaction, 'Deleted all configuration for this guild!');
 }
 
 /**
  * Copies role-react mappings from the selected message to the copy target
  * message. This requires both a message and a copy target to be selected.
  */
-async function cmdCopyMappings(interaction) {
-	let msg_from = SELECTED_MESSAGE_CACHE.get(interaction.user.id);
-	let msg_copy = CLONE_MESSAGE_CACHE.get(interaction.user.id);
+async function cmdCopyMappings(
+	interaction: WithGuild<ChatInputCommandInteraction>
+): Promise<void> {
+	const cached_msg_from = SELECTED_MESSAGE_CACHE.get<Message<boolean>>(interaction.user.id);
+	const cached_msg_copy = CLONE_MESSAGE_CACHE.get<Message<boolean>>(interaction.user.id);
 
-	if (!msg_from) {
-		return ephemReply(interaction,
+	if (!cached_msg_from) {
+		await ephemReply(interaction,
 			'No message selected! Select a message first.'
 		);
+		return;
 	}
 
-	if (!msg_copy) {
-		return ephemReply(interaction,
+	if (!cached_msg_copy) {
+		await ephemReply(interaction,
 			'No copy target selected! Select a copy target message first.'
 		);
+		return;
 	}
 
-	if (msg_from === msg_copy) {
-		return ephemReply(interaction, 'Cannot copy a message to itself!');
+	if (cached_msg_from.id === cached_msg_copy.id) {
+		await ephemReply(interaction, 'Cannot copy a message to itself!');
+		return;
 	}
 
-	msg_from = await msg_from.fetch();
-	msg_copy = await msg_copy.fetch();
+	const msg_from = await cached_msg_from.fetch();
+	const msg_copy = await cached_msg_copy.fetch();
 
 	// Prevent modifying a server from outside a server
 	const guild = interaction.guild;
 	if (guild !== msg_from.guild || guild !== msg_copy.guild) {
-		return ephemReply(interaction, unindent(`
+		await ephemReply(interaction, unindent(`
 			Source and target messages need to be in the same Server this
 			command was issued from!
 		`));
+		return;
 	}
 
 	// Need to reply to keep the interaction token alive while we copy
 	await ephemReply(interaction, 'Copying, this may take a moment...');
 
-	return database.transaction(async trx => {
+	await database.transaction(async trx => {
 		const mapping = await database.getRoleReactMap(msg_from.id, trx);
 		for await (const [emoji_id, role_id] of entries(mapping)) {
 			try {
@@ -752,7 +840,7 @@ async function cmdCopyMappings(interaction) {
 			} catch (err) {
 				logger.error('Failed to copy roles', err);
 				await ephemEdit(interaction, 'Something went wrong. Try again?');
-				rethrowHandled(err);
+				throw new database.HandledError(err as Error);
 			}
 
 			try {
@@ -763,7 +851,7 @@ async function cmdCopyMappings(interaction) {
 					Could not add reacts to the target message. Do I have the
 					right permissions?
 				`));
-				rethrowHandled(err);
+				throw new database.HandledError(err as Error);
 			}
 		}
 
@@ -777,5 +865,4 @@ async function cmdCopyMappings(interaction) {
 	});
 }
 
-module.exports = REGISTRY;
-
+export default REGISTRY;

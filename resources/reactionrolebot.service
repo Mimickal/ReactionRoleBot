@@ -1,4 +1,8 @@
-# Install this into /etc/systemd/system/
+# Install this into <your home dir>/.config/systemd/user/
+# Enable with:
+# loginctl enable-linger <your user here>
+# systemctl --user enable reactionrolebot.service
+# systemctl --user start reactionrolebot.service
 
 [Unit]
 Description=No Bullshit Role React Discord Bot
@@ -9,7 +13,6 @@ After=network.target network-online.target
 Type=simple
 Restart=on-failure
 RestartSec=10
-User=<user>
 Environment="NODE_ENV=prod"
 ExecStart=/usr/bin/env npm start --prefix /srv/discord/ReactionRoleBot/
 # If using nvm, you may need to do something like this instead:
@@ -17,4 +20,4 @@ ExecStart=/usr/bin/env npm start --prefix /srv/discord/ReactionRoleBot/
 #ExecStart=<path to nvm-exec> npm start --prefix /srv/discord/ReactionRoleBot
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
