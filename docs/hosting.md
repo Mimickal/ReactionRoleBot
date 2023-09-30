@@ -67,7 +67,7 @@ bot's database. Run this from `/srv/discord`:
 git clone https://github.com/Mimickal/ReactionRoleBot.git
 cd ReactionRoleBot
 npm ci
-npm run register /etc/discord/ReactionRoleBot/config.json
+npm run register -- --config /etc/discord/ReactionRoleBot/config.json src/commands.ts
 NODE_ENV=prod npm run knex migrate:latest
 ```
 
@@ -86,7 +86,7 @@ start your bot.
 
 - **database_file** - Use a different SQLite3 database file. This defaults to `/srv/discord/rolebot.sqlite3`. Users on non-Linux systems will probably want to change this.
 - **enable_precache** - Makes the bot pre-cache all messages with reaction roles on startup. This can help the bot be more consistent when it first starts, but will cause larger bots to be rate limited. Use with caution!
-- **guild_id** - Limits slash command registration to this Guild. This is useful for bot development.
+- **guild** - Limits slash command registration to this Guild. This is useful for bot development.
 - **log_file** - Use a different log file. This defaults to `output.log` in the project root.
 
 You can also run the bot with a config file other than `config.json`, but you must provide an absolute file path!
