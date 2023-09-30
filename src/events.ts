@@ -55,7 +55,7 @@ const REQUIRED_PERMISSIONS: [bigint, string][] = [
 	[PermissionFlagsBits.ManageRoles,        'Manage Roles'],
 	[PermissionFlagsBits.ReadMessageHistory, 'Read Message History'],
 	[PermissionFlagsBits.UseExternalEmojis,  'Use External Emojis'],
-	[PermissionFlagsBits.ViewChannel,        'Read Text Channels & See Voice Channels'],
+	[PermissionFlagsBits.ViewChannel,        'View Channels'],
 ];
 
 /**
