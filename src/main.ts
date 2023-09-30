@@ -9,15 +9,13 @@
 import * as Discord from 'discord.js';
 import { createLogger, GlobalLogger, startupMsg } from '@mimickal/discord-logging';
 
-const config = require('./config');
+import { Config, Package } from './config';
 
 // Need to set logger before loading modules that use it.
-const logger = createLogger({ filename: config.log_file });
+const logger = createLogger({ filename: Config.log_file });
 GlobalLogger.setGlobalLogger(logger);
 
 import * as events from './events';
-
-const PACKAGE = require('../package.json');
 
 // Everything operates on IDs, so we can safely rely on partials.
 // This allows reaction events to fire for uncached messages.
@@ -39,7 +37,7 @@ const client = new Discord.Client({
 	],
 	presence: {
 		activities: [{
-			name: `Version ${PACKAGE.version}`,
+			name: `Version ${Package.version}`,
 			type: Discord.ActivityType.Playing,
 		}],
 	},
@@ -56,9 +54,9 @@ client.on(Discord.Events.MessageReactionAdd, events.onReactionAdd);
 client.on(Discord.Events.MessageReactionRemove, events.onReactionRemove);
 
 
-logger.info(startupMsg(PACKAGE.version, config));
+logger.info(startupMsg(Package.version, Config));
 
-client.login(config.token).catch(err => {
+client.login(Config.token).catch(err => {
 	logger.error('Failed to log in!', err);
 	process.exit(1);
 });

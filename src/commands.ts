@@ -53,7 +53,7 @@ import {
 import Multimap from 'multimap';
 import NodeCache from 'node-cache';
 
-const PACKAGE = require('../package.json');
+import { Package } from './config';
 import * as database from './database';
 import { emojiToKey, entries, ephemEdit, ephemReply } from './util';
 
@@ -270,9 +270,9 @@ function requireAuth<T extends CommandInteraction>(
 async function cmdInfo(interaction: ChatInputCommandInteraction): Promise<void> {
 	const stats = await database.getMetaStats();
 	await interaction.reply(asLines([
-		PACKAGE.description,
-		`${bold('Running version:')} ${PACKAGE.version}`,
-		`${bold('Source code:')} ${PACKAGE.homepage}`,
+		Package.description,
+		`${bold('Running version:')} ${Package.version}`,
+		`${bold('Source code:')} ${Package.homepage}`,
 		'',
 		codeBlock(asLines([
 			'Stats For Nerds:',

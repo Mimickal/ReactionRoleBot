@@ -6,6 +6,7 @@
   "dependencies": {
     "@mimickal/discord-logging": "github:Mimickal/discord-logging#v1.3.0",
     "@types/lodash": "^4.14.199",
+    "@types/minimist": "^1.2.3",
     "@types/multimap": "^1.1.2",
     "async-mutex": "^0.3.2",
     "discord-command-registry": "^3.1.1",

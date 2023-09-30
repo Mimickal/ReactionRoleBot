@@ -26,7 +26,7 @@ import { GlobalLogger, detail, stringify, unindent } from '@mimickal/discord-log
 import lodash from 'lodash';
 
 import commands from './commands';
-const config = require('./config');
+import { Config } from './config';
 import * as database from './database';
 import UserMutex from './mutex';
 import { emojiToKey } from './util';
@@ -335,7 +335,7 @@ export async function onReactionRemove(
 export async function onReady(client: Client<true>): Promise<void> {
 	logger.info(`Logged in as ${client.user.tag} (${client.user.id})`);
 
-	if (config.enable_precache) {
+	if (Config.enable_precache) {
 		logger.warn(unindent(`
 			Precaching is VERY hard on Discord's API and will cause the bot to
 			get rate limited, unless the bot is only in very few servers. Use
