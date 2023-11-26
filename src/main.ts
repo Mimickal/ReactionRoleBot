@@ -7,7 +7,8 @@
  * for more information.
  ******************************************************************************/
 import * as Discord from 'discord.js';
-import { createLogger, GlobalLogger, startupMsg } from '@mimickal/discord-logging';
+import { createLogger, GlobalLogger, startupMsg, unindent } from '@mimickal/discord-logging';
+import { existsSync } from 'fs';
 
 import { Config, Package } from './config';
 
@@ -16,6 +17,19 @@ const logger = createLogger({ filename: Config.log_file });
 GlobalLogger.setGlobalLogger(logger);
 
 import * as events from './events';
+
+// Starting the bot without a database file will cause any query to throw
+// an error, and indicates a mistake in the user's setup.
+// Just save people the trouble and exit immediately.
+if (!existsSync(Config.database_file) && logger) {
+	logger.error(unindent(`
+		Cannot find database ${Config.database_file}.
+		If this is your first time running the bot, you may need to run
+		the knex migration. If you already ran the migration and this path
+		isn't what you expect, you may need to add "database_file" to your config file.
+	`));
+	process.exit(1);
+}
 
 // Everything operates on IDs, so we can safely rely on partials.
 // This allows reaction events to fire for uncached messages.

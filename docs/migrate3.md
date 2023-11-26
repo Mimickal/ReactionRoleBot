@@ -23,4 +23,4 @@ should affect is the install size (2.0 was ~64 MB, 3.0 is ~114 MB).
     - Removed `User` field in favor of running as a user service.
 1. Restart the bot.
     - **Running as a service**: `systemctl restart reactionrolebot.service`
-    - **Running in dev-mode**: `npm start path/to/your/config.json`
+    - **Running in dev-mode**: `npm start --config path/to/your/config.json`

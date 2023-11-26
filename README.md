@@ -1,14 +1,15 @@
-# Overview
+# No BS Role Reacts
 
 <a href="LICENSE.md"><img align="right" alt="AGPL-3.0 Logo"
 src="https://www.gnu.org/graphics/agplv3-155x51.png">
 </a>
 
-A Discord bot that can assign roles based on message reactions.<br/>
-[You can invite my live instance of the bot to your server with this link](
-https://discord.com/oauth2/authorize?client_id=692585944934514738&scope=applications.commands%20bot&permissions=335881280
-).<br/>
-[Join the support server here](https://discord.gg/7UBT8SK).
+No BS Role Reacts is a Discord bot that can assign roles based on message reactions.
+
+<img align="right" alt="Zerda Logo" width="128px" src="./docs/fox.svg"/>
+
+### [Invite No BS Role Reacts to your server](https://discord.com/oauth2/authorize?client_id=692585944934514738&scope=applications.commands%20bot&permissions=335881280)
+### Need help? [Join the support server here](https://discord.gg/7UBT8SK).
 
 # Why this bot?
 Several other popular role-react bots exist, but many of them have some annoying
@@ -131,6 +132,10 @@ is registering the actions. Give it a few seconds to catch up.
 Discord implements `@everyone` as a role under the hood. This means you can set
 up react roles for `@everyone` like you would for any other role. It's silly, it
 won't do anything, but you *could* do it...
+
+## Privacy
+See [information storage disclosure](./docs/information-storage-disclosure.md)
+for a summary of what data this bot stores and why.
 
 ## Hosting your own instance
 [See the guide here](docs/hosting.md).

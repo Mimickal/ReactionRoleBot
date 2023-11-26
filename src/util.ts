@@ -71,6 +71,19 @@ export function ephemReply(interaction: CommandInteraction, content: string) {
 	});
 }
 
+/**
+ * Stringify an error, recursing through possibly-nested causes.
+ */
+export function errToStr(error: Error): string {
+	let str = error.stack || '';
+	let cause = error.cause as Error;
+	while (cause) {
+		str += `\n[cause]: ${cause.stack}`;
+		cause = cause.cause as Error;
+	}
+	return str || error.toString();
+}
+
 /** Matches Discord IDs. */
 export function isDiscordId(value: any): value is string {
 	return !!value?.match?.(DISCORD_ID_PATTERN);
