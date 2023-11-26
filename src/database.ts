@@ -10,12 +10,12 @@ const knexfile = require('./knexfile');
 import setupKnex, { Knex } from 'knex';
 const knex = setupKnex(knexfile[process.env.NODE_ENV || 'development']);
 
-import lodash from 'lodash';
+import { Snowflake } from 'discord.js';
 import { GlobalLogger, stringify } from '@mimickal/discord-logging';
+import lodash from 'lodash';
 import MultiMap from 'multimap';
 
 import { isDiscordId, isEmojiStr } from './util';
-import { Snowflake } from 'discord.js';
 
 const logger = GlobalLogger.logger;
 
