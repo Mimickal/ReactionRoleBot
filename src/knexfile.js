@@ -6,19 +6,18 @@
  * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
  * for more information.
  ******************************************************************************/
-const { join } = require('path');
+const config = require('./config/env');
 
-const CONF_FILE = process.env.NODE_ENV === 'prod'
-	? '/etc/discord/ReactionRoleBot/config.json'
-	: join(__dirname, '..', 'dev-config.json');
-const config = require(CONF_FILE);
+const COMMON_CONFIG = {
+	client: 'sqlite3',
+	useNullAsDefault: true,
+};
 
 module.exports = {
 	development: {
-		client: 'sqlite3',
-		useNullAsDefault: true,
+		...COMMON_CONFIG,
 		connection: {
-			filename: config.database_file || join(__dirname, '..', 'dev.sqlite3'),
+			filename: config.database_file,
 		},
 		// Helps us catch hanging transactions in dev by locking up the database
 		// if we forget to commit anything.
@@ -29,19 +28,16 @@ module.exports = {
 	},
 
 	testing: {
-		client: 'sqlite3',
-		useNullAsDefault: true,
+		...COMMON_CONFIG,
 		connection: {
-			filename: ':memory:'
-		}
+			filename: ':memory:',
+		},
 	},
 
 	prod: {
-		client: 'sqlite3',
-		useNullAsDefault: true,
+		...COMMON_CONFIG,
 		connection: {
-			filename: config.database_file || '/srv/discord/rolebot.sqlite3',
-		}
-	}
+			filename: config.database_file,
+		},
+	},
 };
-
