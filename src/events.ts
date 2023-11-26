@@ -29,7 +29,7 @@ import commands from './commands';
 import { Config } from './config';
 import * as database from './database';
 import UserMutex from './mutex';
-import { emojiToKey } from './util';
+import { emojiToKey, errToStr } from './util';
 
 const logger = GlobalLogger.logger;
 
@@ -138,7 +138,9 @@ export async function onInteraction(interaction: BaseInteraction): Promise<void>
 	try {
 		await commands.execute(interaction);
 	} catch (err) {
-		logger.error(`${detail(interaction)} error fell through:`, err);
+		logger.error(`${detail(interaction)} error fell through:\n${
+			errToStr(err as Error)
+		}`);
 	}
 }
 
