@@ -109,7 +109,7 @@ let databaseFile =
 		: path.join(PROJECT_ROOT, 'dev.sqlite3')
 	);
 if (!path.isAbsolute(databaseFile)) {
-	confFile = path.resolve(PROJECT_ROOT, databaseFile);
+	databaseFile = path.resolve(PROJECT_ROOT, databaseFile);
 }
 
 /**
