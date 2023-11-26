@@ -6,8 +6,6 @@
  * License v3.0. See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html>
  * for more information.
  ******************************************************************************/
-const { unindent } = require('../util');
-
 const REACTS = 'reacts';
 const REACTS_TMP = `${REACTS}_tmp`;
 
@@ -52,11 +50,11 @@ exports.up = async function(knex) {
 };
 
 exports.down = async function(knex) {
-	console.warn(unindent(`
+	console.warn(`
 		Rolling back ${REACTS} primary key change. This will delete instances
 		where multiple rows have the same message_id and emoji_id values, but
 		have different role_id values.
-	`));
+	`);
 
 	await knex.transaction(async trx => {
 		// Print and delete rows with now-duplicate primary keys.
