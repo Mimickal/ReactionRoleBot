@@ -23,7 +23,7 @@
     "start": "NODE_ENV=prod npx ts-node src/main.ts",
     "dev": "npx ts-node --logError src/main.ts dev-config.json",
     "knex": "npx knex --knexfile src/knexfile.js",
-    "register": "npx ts-node node_modules/discord-command-registry/src/register.ts",
+    "register": "npx ts-node node_modules/discord-command-registry/src/register.ts src/commands.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

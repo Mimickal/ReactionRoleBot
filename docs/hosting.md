@@ -1,8 +1,8 @@
 # Hosting your own instance
 
-This bot is built on [discord.js](https://discord.js.org/#/) v13, so you'll need
-Node.js 16.6.0 (or newer) installed. You will also need your own Discord bot
-account. If your platform does not have Node.js 16.6.0, consider using something
+This bot is built on [discord.js](https://discord.js.org/#/) v14, so you'll need
+Node.js 16.11.0 (or newer) installed. You will also need your own Discord bot
+account. If your platform does not have Node.js 16.11.0, consider using something
 like https://github.com/nvm-sh/nvm.
 
 This guide assumes you're hosting on a Linux distro with `systemd`. The bot will
@@ -22,7 +22,7 @@ blanks with your bot's info):
 ```json
 {
   "token": "<your token here>",
-  "app_id": "<your bot application ID here>"
+  "app": "<your bot application ID here>"
 }
 ```
 
@@ -56,7 +56,7 @@ following (obviously fill in the blanks with your bot's info):
 ```json
 {
   "token": "<your token here>",
-  "app_id": "<your bot application ID here>"
+  "app": "<your bot application ID here>"
 }
 ```
 
@@ -67,7 +67,7 @@ bot's database. Run this from `/srv/discord`:
 git clone https://github.com/Mimickal/ReactionRoleBot.git
 cd ReactionRoleBot
 npm ci
-npm run register -- --config /etc/discord/ReactionRoleBot/config.json src/commands.ts
+npm run register -- --config path/to/your/config.json
 NODE_ENV=prod npm run knex migrate:latest
 ```
 
@@ -94,5 +94,16 @@ You can also run the bot with a config file other than `config.json`, but you mu
 Examples:
 ```
 npm run knex migrate:latest /absolute/path/to/my_config.json
-npm start /absolute/config/path.json
+npm start /absolute/path/to/my_config.json
 ```
+
+## SQLite3 errors
+
+The `npm ci` procedure includes compiling SQLite3 from source. Building from source is always a little harrowing because there are a lot of reasons it can fail. If you run into errors building SQLite3, try one of the following:
+
+- Delete `package-lock.json` and run `npm install`.
+- Try installing [build tools](https://stackoverflow.com/a/59719695).
+- Run `npm rebuild node-gyp`.
+- Run `npm install -g node-gyp`.
+
+Try these **one at a time**.
